@@ -13,7 +13,7 @@ import yaml
 MANAGED = {'src/' + name for name in ('bootstrap.py', 'appearance_inspection.py', 'inspection_engine.py',
     'config_import.py', 'inspection_runtime.py', 'native_window.py', 'evidence_store.py', 'network_workflow.py', 'job_store.py',
     'gas_post.py', 'l2_device_info.py', 'instance_lock.py', 'ir_cut_check.py', 'app_paths.py')}
-MANAGED.update({'start.vbs', 'src/launcher.py', 'src/launcher_core.py', 'src/script_launcher.py',
+MANAGED.update({'src/launcher.py', 'src/launcher_core.py', 'src/script_launcher.py',
                 'examples/gas_receiver.gs', 'docs/LAUNCHER.md', 'docs/JOB_WORKFLOW.md', 'docs/DESKTOP_UI.md', 'docs/SAVE_LAYOUT.md'})
 
 

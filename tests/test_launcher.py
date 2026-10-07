@@ -20,8 +20,9 @@ class LauncherTests(unittest.TestCase):
             self.assertEqual(python_command(self.root, ''), [sys.executable])
             lookup.assert_not_called()
 
-    def test_vbs_update_is_allowed_only_for_managed_start_script(self):
-        self.assertEqual(core.safe_path(self.root, 'start.vbs'), self.root / 'start.vbs')
+    def test_vbs_stays_in_distribution_for_old_updater_compatibility(self):
+        self.assertNotIn('start.vbs', core.MANAGED)
+        with self.assertRaises(ValueError): core.safe_path(self.root, 'start.vbs')
         with self.assertRaises(ValueError): core.safe_path(self.root, 'unexpected.vbs')
 
     def test_new_pc_uses_builtin_repository_without_config(self):
