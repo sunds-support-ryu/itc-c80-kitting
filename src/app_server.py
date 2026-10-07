@@ -173,6 +173,7 @@ class BrowserInspection(engine.InspectionUI):
         self.working = {}
         self.onboarding = set()
         self.config_running = set()
+        self.config_dispatched = set()
         self.camera_credentials = {}
         self.task_generation = {}
         self.approved = set()
@@ -198,6 +199,8 @@ class BrowserInspection(engine.InspectionUI):
         self.post_error = ""
         self.ir_checks = {}
         self.ir_frame_times = {}
+        self.rtsp_counts = {}
+        self.rtsp_sample_times = {}
         super().__init__(root)
         if not self.settings.get('post_url'):
             self.settings['post_url'] = gas_post.DEFAULT_POST_URL
@@ -256,15 +259,7 @@ class BrowserInspection(engine.InspectionUI):
         index = self.selected_panel if index is None else index
         panel = self.panels[index]
         if panel.camera and panel.exterior_done and panel.reader:
-            identity = flow.mac(panel.camera.mac)
-            check = self.ir_checks.setdefault(identity, ir_cut_check.Check())
-            if check.stage in ('COVER', 'TIMEOUT'):
-                check.start(time.monotonic())
-                self.store.update(identity, step='IR_CUT_BW', results={'ir_cut': None})
-                console_log(f'[IR-CUT 開始] MAC={identity}')
-                return
-            if check.stage != 'PASS':
-                raise ValueError('IR-CUT自動確認中です。NGは手動で選択できます')
+            raise ValueError('RTSPとIR-CUTは自動確認です。失敗時はNGを選択してください')
         return super().mark_ok(index)
 
     def poll_ir_cut(self):
@@ -280,32 +275,83 @@ class BrowserInspection(engine.InspectionUI):
             fresh = stamp is not None and stamp != self.ir_frame_times.get(identity)
             frame = np.asarray(image) if image is not None and fresh else None
             previous = check.stage
+            now = time.monotonic()
+            if check.stage == 'COVER':
+                if image is None:
+                    self.rtsp_counts[identity] = 0
+                elif fresh and now - self.rtsp_sample_times.get(identity, -float('inf')) >= .5:
+                    self.rtsp_sample_times[identity] = now
+                    self.rtsp_counts[identity] = self.rtsp_counts.get(identity, 0) + 1
+                    if self.rtsp_counts[identity] >= 3:
+                        check.start(now)
+                        self.store.update(identity, step='IR_CUT_BW', results={'rtsp': 'OK', 'ir_cut': None})
+                        console_log(f'[RTSP 自動OK → IR-CUT自動開始] MAC={identity}')
+                if fresh:
+                    self.ir_frame_times[identity] = stamp
             if check.stage in ('BW', 'COLOR'):
                 if fresh or image is None or time.monotonic() - check.started > 90:
                     check.feed(frame, time.monotonic())
                 if fresh:
                     self.ir_frame_times[identity] = stamp
             if check.stage == 'PASS':
+                if identity in self.config_dispatched:
+                    continue
                 self.store.update(identity, step='CONFIG', results={'rtsp': 'OK', 'ir_cut': 'OK'})
                 panel.add_log('IR-CUT 自動OK · 黒白→カラー確認')
-                super().mark_ok(panel.index)
+                self.start_config(panel)
                 continue
-            messages = {'COVER': '蓋を被ってください。', 'BW': '黒白への切替を確認中…',
-                        'COLOR': '蓋を外してください。', 'TIMEOUT': '切替を確認できません。NG または再試行してください。'}
-            panel.status.config(text='IR-CUT · ' + messages[check.stage])
+            messages = {'COVER': 'RTSP映像を確認中…', 'BW': '蓋を被ってください。',
+                        'COLOR': '蓋を外してください。', 'TIMEOUT': '切替を確認できません。NGを選択してください。'}
+            panel.status.config(text=('RTSP · ' if check.stage == 'COVER' else 'IR-CUT · ') + messages[check.stage])
             panel.status_detail.place(relx=.5, rely=.82, anchor='center', relwidth=.92)
             panel.status_detail.config(text=messages[check.stage] + ('\n確認 ' + str(check.count) + '/3' if check.stage in ('BW', 'COLOR') else ''))
-            panel.ok.config(text='蓋を被せた · 開始' if check.stage == 'COVER' else '再試行' if check.stage == 'TIMEOUT' else '自動確認中',
-                            state='normal' if check.stage in ('COVER', 'TIMEOUT') and image is not None else 'disabled')
-            panel.ng.config(text='IR-CUT NG', state='normal' if not self.ng_preview_open else 'disabled')
+            panel.ok.config(text='自動確認中', state='disabled')
+            panel.ng.config(text='RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG', state='normal' if not self.ng_preview_open else 'disabled')
             if self.mode_count == 1:
                 if panel.ok.cget('state') == 'normal':
                     panel.ok.config(text=panel.ok.cget('text') + ' [Enter]')
                 if panel.ng.cget('state') == 'normal':
-                    panel.ng.config(text='IR-CUT NG [Esc]')
+                    panel.ng.config(text=panel.ng.cget('text') + ' [Esc]')
             if check.stage != previous:
                 self.store.update(identity, step='IR_CUT_' + check.stage)
                 console_log(f'[IR-CUT] MAC={identity} {previous}→{check.stage} {check.metrics}')
+
+    def start_config(self, panel):
+        if self.demo:
+            return
+        camera = panel.camera
+        if camera is None:
+            raise ValueError('設定書込対象カメラがありません')
+        identity = flow.mac(camera.mac)
+        if identity in self.config_dispatched:
+            return
+        self.config_dispatched.add(identity)
+        self.config_running.add(identity)
+        panel.finish('設定書込待ち')
+        panel.show_result('RUNING', camera)
+        panel.ok.config(state='disabled')
+        panel.ng.config(state='disabled')
+        console_log(f'[IR-CUT OK → config投入] MAC={identity} IP={camera.ip}')
+        def execute():
+            try:
+                engine.step3.load_config(self.settings_dir)
+                self.store.update(identity, step='CONFIG', config_uncertain=True)
+                success, detail = engine.step3.run(camera, self.settings_dir,
+                    (engine.USERNAME, engine.PASSWORD),
+                    log=lambda text: (console_log(f'[config] MAC={identity} {text}'),
+                        engine.event_queue.put(('step3_progress', camera.mac, text))),
+                    stopped=engine.APP_STOP.is_set, reset_ip=False,
+                    credential_report=lambda credentials: self.camera_credentials.__setitem__(identity, credentials))
+                self.store.update(identity, step='STICKER' if success else 'CONFIG',
+                    access_stage='before' if self.camera_credentials.get(identity) == (engine.USERNAME, engine.PASSWORD) else 'after',
+                    config_uncertain=not success and '拒否' not in detail,
+                    results={'settings': 'OK' if success else 'NG'})
+                self.workflow_events.put(('config_ready' if success else 'config_failed', (camera, detail)))
+            except Exception as error:
+                self.workflow_events.put(('config_failed', (camera, str(error))))
+            finally:
+                self.config_running.discard(identity)
+        threading.Thread(target=execute, daemon=True, name='config-' + identity.replace(':', '')).start()
 
     def selected_interface(self):
         selected = self.settings.get("network_id")
@@ -339,6 +385,10 @@ class BrowserInspection(engine.InspectionUI):
                 for cached in known:
                     if cached.get("ip") and cached["mac"] not in [d["mac"] for d in discovered] and link.arp(cached["ip"], cached["mac"]):
                         discovered.append(dict(cached))
+                if allow_moves:
+                    planned = flow.network_config(self.settings, interface)
+                    pool = planned['work'][:self.mode_count]
+                    discovered.sort(key=lambda device: (0 if device.get('ip') in pool else 2 if device.get('ip') in planned['targets'] else 1, device.get('ip', '')))
                 for device in discovered:
                     if engine.APP_STOP.is_set():
                         break
@@ -398,9 +448,13 @@ class BrowserInspection(engine.InspectionUI):
                             continue
                         if self.store.job and len(self.store.job["devices"]) >= self.store.job.get("expected_count", self.mode_count):
                             continue
-                        work_ip = next((ip for ip in config["work"][:self.mode_count] if ip not in used and not link.arp(ip)), None)
+                        if device.get('ip') in config['work'][:self.mode_count] and device['ip'] not in used:
+                            work_ip = device['ip']
+                        else:
+                            work_ip = next((ip for ip in config["work"][:self.mode_count] if ip not in used and not link.arp(ip)), None)
                     if work_ip is None:
-                        raise ValueError("作業IPの空きがありません")
+                        console_log(f'[作業IP 待機] MAC={device_mac} 空きなし。他のMACの処理を継続')
+                        continue
                     needs_move = device_mac not in self.working and device.get("ip") != work_ip
                     self.journal.hold_work(device_mac, work_ip, interface["id"])
                     slot = config["work"].index(work_ip) + 1
@@ -518,44 +572,6 @@ class BrowserInspection(engine.InspectionUI):
                 return camera
             return None
         engine.get_camera_info = allowed_info
-        async def config_worker(session):
-            import asyncio
-            async def execute(camera):
-                identity = flow.mac(camera.mac)
-                if identity in self.config_running:
-                    return
-                self.config_running.add(identity)
-                try:
-                    self.store.update(camera.mac, step="CONFIG", config_uncertain=True, results={"rtsp": "OK"})
-                    success, detail = await asyncio.to_thread(engine.step3.run, camera, self.settings_dir,
-                        (engine.USERNAME, engine.PASSWORD),
-                        lambda text: engine.event_queue.put(("step3_progress", camera.mac, text)),
-                        stopped=engine.APP_STOP.is_set, reset_ip=False,
-                        credential_report=lambda credentials: self.camera_credentials.__setitem__(identity, credentials))
-                    if success:
-                        self.store.update(identity, access_stage="before" if self.camera_credentials.get(identity) == (engine.USERNAME, engine.PASSWORD) else "after")
-                    self.store.update(camera.mac, step="STICKER" if success else "CONFIG",
-                                      config_uncertain=not success and "拒否" not in detail,
-                                      results={"settings": "OK" if success else "NG"})
-                    self.workflow_events.put(("config_ready" if success else "config_failed", (camera, detail)))
-                except Exception as error:
-                    self.workflow_events.put(("config_failed", (camera, str(error))))
-                finally:
-                    self.config_running.discard(identity)
-            tasks = set()
-            try:
-                while not engine.APP_STOP.is_set():
-                    try:
-                        camera = await asyncio.wait_for(engine.STEP3_QUEUE.get(), timeout=1)
-                    except asyncio.TimeoutError:
-                        continue
-                    task = asyncio.create_task(execute(camera))
-                    tasks.add(task)
-                    task.add_done_callback(tasks.discard)
-            finally:
-                if tasks:
-                    await asyncio.gather(*tasks, return_exceptions=True)
-        engine.step3_worker = config_worker
         self.flow_started = True
         if not self.engine_started:
             engine.scanner_main = self.mac_scanner
@@ -563,6 +579,13 @@ class BrowserInspection(engine.InspectionUI):
             self.engine_started = True
         else:
             self.scan_started = True
+        if getattr(self, 'resuming', False) and self.store.job:
+            for identity, record in self.store.job['devices'].items():
+                device_mac = flow.mac(identity)
+                assignment = self.journal.data['assignments'].get(device_mac, {})
+                if assignment.get('state') == 'confirmed':
+                    saved_camera = engine.CameraInfo(assignment['ip'], record['sn'], device_mac)
+                    self.watch_removal(saved_camera, assignment['ip'], 'disconnected')
         self.device_scan()
 
     async def mac_scanner(self, start_ip, end_ip):
@@ -576,7 +599,6 @@ class BrowserInspection(engine.InspectionUI):
         tasks = {}
         generations = {}
         async with engine.aiohttp.ClientSession() as session:
-            config_task = asyncio.create_task(engine.step3_worker(session))
             try:
                 while not engine.APP_STOP.is_set():
                     for identity, task in list(tasks.items()):
@@ -629,9 +651,9 @@ class BrowserInspection(engine.InspectionUI):
                             tasks.pop(identity)
                     await asyncio.sleep(.2)
             finally:
-                for task in [*tasks.values(), config_task]:
+                for task in tasks.values():
                     task.cancel()
-                await asyncio.gather(*tasks.values(), config_task, return_exceptions=True)
+                await asyncio.gather(*tasks.values(), return_exceptions=True)
                 engine.SCANNER_LOOP = None
 
     async def reserve_mac_panel(self, camera):
@@ -727,9 +749,8 @@ class BrowserInspection(engine.InspectionUI):
             if panel.camera and panel.exterior_done:
                 check = self.ir_checks.get(flow.mac(panel.camera.mac))
                 if check and check.stage != 'PASS':
-                    label = '蓋を被せた · 開始' if check.stage == 'COVER' else '再試行' if check.stage == 'TIMEOUT' else '自動確認中'
-                    panel.ok.config(text=label + (' [Enter]' if self.mode_count == 1 and panel.ok.cget('state') == 'normal' else ''))
-                    panel.ng.config(text='IR-CUT NG' + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
+                    panel.ok.config(text='自動確認中', state='disabled')
+                    panel.ng.config(text=('RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG') + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
 
     def watch_removal(self, camera, ip, event="ng_disconnected", discover=False):
         identity = flow.mac(camera.mac)
@@ -791,6 +812,8 @@ class BrowserInspection(engine.InspectionUI):
                 camera, future = value
                 identity = flow.mac(camera.mac)
                 self.ir_checks[identity] = ir_cut_check.Check()
+                self.rtsp_counts.pop(identity, None)
+                self.rtsp_sample_times.pop(identity, None)
                 self.ir_frame_times.pop(identity, None)
                 record = self.store.job['devices'].get(identity.replace(':', '').upper(), {}) if self.store.job else {}
                 if record.get('results', {}).get('ir_cut') == 'OK':
@@ -899,7 +922,9 @@ class BrowserInspection(engine.InspectionUI):
                 console_log(f"[MAC保護 解除] MAC={camera.mac} 断電確認")
                 self.working.pop(flow.mac(camera.mac), None)
                 self.approved.discard(flow.mac(camera.mac))
-                self.jobs[flow.mac(camera.mac)]["state"] = "disconnected"
+                identity = flow.mac(camera.mac)
+                self.jobs.setdefault(identity, {'camera': camera, 'target': camera.ip})['state'] = 'disconnected'
+                self.store.finish(identity, 'OK')
                 for panel in self.panels:
                     if panel.processing_camera and flow.mac(panel.processing_camera.mac) == flow.mac(camera.mac):
                         panel.finish()
@@ -1224,6 +1249,9 @@ class BrowserInspection(engine.InspectionUI):
                 raise ValueError("このMACの処理は実行中です")
             self.task_generation[identity] = self.task_generation.get(identity, 0) + 1
             self.ir_checks.pop(identity, None)
+            self.config_dispatched.discard(identity)
+            self.rtsp_counts.pop(identity, None)
+            self.rtsp_sample_times.pop(identity, None)
             self.ir_frame_times.pop(identity, None)
             self.approved.discard(identity)
             self.jobs.pop(identity, None)
@@ -1393,6 +1421,7 @@ class BrowserInspection(engine.InspectionUI):
                 "image": panel.video.image is not None, "selected": self.selected_panel == panel.index,
                 "ok": panel.ok.cget("text"), "ng": panel.ng.cget("text"),
                 "can_ok": panel.ok.cget("state") == "normal" and not self.ng_preview_open and not self.demo,
+                "hide_ok": bool(panel.camera and panel.exterior_done and panel.reader),
                 "can_ng": panel.ng.cget("state") == "normal" and not self.ng_preview_open and not self.demo,
                 "camera": {"ip": camera.ip, "sn": camera.sn, "mac": camera.mac,
                            "model": self.journal.data["devices"].get(flow.mac(camera.mac), {}).get("model", ""),

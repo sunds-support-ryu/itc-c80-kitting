@@ -11,6 +11,7 @@ import tempfile
 import types
 import unittest
 import asyncio
+import time
 from unittest.mock import patch
 
 import numpy as np
@@ -47,7 +48,9 @@ class BrowserTests(unittest.TestCase):
             storage_patch.start()
             self.addCleanup(storage_patch.stop)
         self.root = web.OwnerLoop()
-        self.app = web.BrowserInspection(self.root, demo=True)
+        with patch.object(web.engine.step3, 'load_settings', return_value={}):
+            self.app = web.BrowserInspection(self.root, demo=True)
+        self.app.settings_dir = self.storage.name
         self.app.demo = False
         scan_patch = patch.object(self.app, "device_scan")
         scan_patch.start()
@@ -116,7 +119,7 @@ class BrowserTests(unittest.TestCase):
 
     def test_manual_ng_dialog_blocks_automatic_ir_pass(self):
         self.app.command({'action': 'ok', 'index': 0})
-        self.app.command({'action': 'ok', 'index': 0})
+        self.advance_rtsp()
         check = self.app.ir_checks[web.flow.mac(self.camera.mac)]
         check.stage, check.count = 'COLOR', 2
         self.app.command({'action': 'ng', 'index': 0})
@@ -127,17 +130,63 @@ class BrowserTests(unittest.TestCase):
 
     def test_rtsp_ok_queues_step3_and_keeps_running(self):
         self.app.command({"action": "ok", "index": 0})
-        with patch.object(web.engine, "request_step3") as request:
-            self.app.command({"action": "ok", "index": 0})
-            request.assert_not_called()
+        with patch.object(self.app, 'start_config') as start:
+            self.advance_rtsp()
             check = self.app.ir_checks[web.flow.mac(self.camera.mac)]
             self.assertEqual(check.stage, 'BW')
+            self.assertTrue(self.app.snapshot()['panels'][0]['hide_ok'])
+            self.assertEqual(self.app.panels[0].ok.cget('state'), 'disabled')
             check.stage = 'PASS'
             self.app.poll_ir_cut()
-            request.assert_called_once_with(self.camera)
-        state = self.app.snapshot()
-        self.assertEqual(state["panels"][0]["result"], "RUNING")
-        self.assertFalse(state["panels"][0]["can_ok"])
+            start.assert_called_once_with(self.app.panels[0])
+
+    def advance_rtsp(self):
+        for now in (100, 100.5, 101):
+            self.app.panels[0].reader.latest_frame_time = now
+            with patch.object(web.time, 'monotonic', return_value=now):
+                self.app.poll_ir_cut()
+
+    def test_full_automatic_flow_dispatches_config_once_without_async_queue(self):
+        identity = web.flow.mac(self.camera.mac)
+        self.app.store.create('TEST', 1, '192.168.0.233')
+        self.app.store.device(identity, 1, self.camera.sn, self.camera.ip, '192.168.0.220')
+        self.app.settings.update(network_id='wired', network_interfaces=[{'id':'wired','name':'Ethernet','ip':'192.168.0.10','mac':'02:00:00:00:00:10'}])
+        self.app.journal.reserve(identity, ['192.168.0.220'], lambda ip: False)
+        target = '192.168.0.220'
+        class Link:
+            changed = False
+            def arp(link, ip, mac=None): return [identity] if mac else []
+            def set_ip(link, *args): link.changed = True
+            def wait_ip(link, *args): return True
+        self.app.link = Link()
+        original_allocate = self.app.allocate_label
+        def run(camera, *args, **kwargs):
+            kwargs['credential_report'](('test-user','test-password'))
+            return True, 'config verified'
+        with patch.object(web.engine.step3, 'load_config', return_value=('config', b'config')), \
+             patch.object(web.engine.step3, 'run', side_effect=run) as write, \
+             patch.object(self.app, 'allocate_label', side_effect=lambda camera: original_allocate(camera, target)), \
+             patch.object(web.engine, 'save_result'):
+            self.app.command({'action':'ok','index':0})  # appearance
+            self.advance_rtsp()
+            for now, color in ((101.5,'gray'),(102,'gray'),(102.5,'gray'),(103,'blue'),(103.5,'blue'),(104,'blue')):
+                reader = self.app.panels[0].reader
+                reader.latest_frame_time = now
+                with patch.object(reader,'snapshot',return_value=Image.new('RGB',(160,90),color)), patch.object(web.time,'monotonic',return_value=now):
+                    self.app.poll_ir_cut()
+            deadline = time.monotonic()+3
+            while self.app.config_running and time.monotonic()<deadline: time.sleep(.01)
+            self.app.poll()
+            self.assertEqual(write.call_count, 1)
+            self.assertEqual(self.app.jobs[identity]['state'], 'sticker')
+            self.app.command({'action':'ok','index':0})  # user sticker confirmation
+            deadline = time.monotonic()+3
+            while self.app.jobs[identity]['state']=='changing' and time.monotonic()<deadline:
+                self.app.poll(); time.sleep(.01)
+            self.assertTrue(self.app.link.changed)
+            self.assertEqual(self.app.jobs[identity]['state'], 'confirmed')
+            self.assertEqual(self.app.store.job['devices'][identity.replace(':','').upper()]['results']['ir_cut'], 'OK')
+            self.assertEqual(self.app.panels[0].result_state, 'OK')
 
     def test_settings_require_network_and_persist_inspection_options(self):
         records = [{"id": "wired", "name": "Ethernet", "ip": "192.168.0.10", "mac": "00:11:22:33:44:55"}]
