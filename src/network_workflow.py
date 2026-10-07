@@ -268,6 +268,13 @@ class Journal:
             self.data["active_work"].pop(mac(device_mac), None)
             self.save()
 
+    def forget_device(self, device_mac):
+        with self.lock:
+            identity = mac(device_mac)
+            self.data['active_work'].pop(identity, None)
+            self.data['assignments'].pop(identity, None)
+            self.save()
+
     def transition(self, device_mac, state):
         with self.lock:
             self.data["assignments"][device_mac]["state"] = state

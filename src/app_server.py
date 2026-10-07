@@ -201,6 +201,7 @@ class BrowserInspection(engine.InspectionUI):
         self.ir_frame_times = {}
         self.rtsp_counts = {}
         self.rtsp_sample_times = {}
+        self.rtsp_started = {}
         super().__init__(root)
         if not self.settings.get('post_url'):
             self.settings['post_url'] = gas_post.DEFAULT_POST_URL
@@ -259,7 +260,20 @@ class BrowserInspection(engine.InspectionUI):
         index = self.selected_panel if index is None else index
         panel = self.panels[index]
         if panel.camera and panel.exterior_done and panel.reader:
-            raise ValueError('RTSPとIR-CUTは自動確認です。失敗時はNGを選択してください')
+            identity = flow.mac(panel.camera.mac)
+            check = self.ir_checks.setdefault(identity, ir_cut_check.Check())
+            if check.stage in ('BW', 'COLOR', 'PASS', 'TIMEOUT'):
+                check.stage = 'IR_ON'
+                self.store.update(identity, step='IR_ON', results={'ir_cut': 'OK', 'ir_cut_method': 'manual'})
+            elif check.stage == 'IR_ON':
+                check.stage = 'IR_OFF'
+                self.store.update(identity, step='IR_OFF', results={'ir_on': 'OK'})
+            elif check.stage == 'IR_OFF':
+                self.store.update(identity, step='CONFIG', results={'ir_off': 'OK'})
+                self.start_config(panel)
+            else:
+                raise ValueError('RTSP確認中です')
+            return
         return super().mark_ok(index)
 
     def poll_ir_cut(self):
@@ -277,6 +291,10 @@ class BrowserInspection(engine.InspectionUI):
             previous = check.stage
             now = time.monotonic()
             if check.stage == 'COVER':
+                self.rtsp_started.setdefault(identity, now)
+                if 'NG' in getattr(panel.reader, 'last_status', '') or now - self.rtsp_started[identity] >= 15:
+                    self.finish_ng_direct(panel, 'E1', 'RTSP接続不可', 'rtsp')
+                    continue
                 if image is None:
                     self.rtsp_counts[identity] = 0
                 elif fresh and now - self.rtsp_sample_times.get(identity, -float('inf')) >= .5:
@@ -294,19 +312,17 @@ class BrowserInspection(engine.InspectionUI):
                 if fresh:
                     self.ir_frame_times[identity] = stamp
             if check.stage == 'PASS':
-                if identity in self.config_dispatched:
-                    continue
-                self.store.update(identity, step='CONFIG', results={'rtsp': 'OK', 'ir_cut': 'OK'})
-                panel.add_log('IR-CUT 自動OK · 黒白→カラー確認')
-                self.start_config(panel)
-                continue
+                self.store.update(identity, step='IR_CUT_CONFIRM') if previous != 'PASS' else None
             messages = {'COVER': 'RTSP映像を確認中…', 'BW': '蓋を被ってください。',
-                        'COLOR': '蓋を外してください。', 'TIMEOUT': '切替を確認できません。NGを選択してください。'}
-            panel.status.config(text=('RTSP · ' if check.stage == 'COVER' else 'IR-CUT · ') + messages[check.stage])
+                        'COLOR': '蓋を外してください。', 'PASS': 'IR-CUT切替を確認し、OK / NGを選択してください。',
+                        'TIMEOUT': 'IR-CUT切替を確認し、OK / NGを選択してください。',
+                        'IR_ON': '蓋を被ってください。IRランプが点灯したらOK。',
+                        'IR_OFF': '蓋を外してください。IRランプが消灯したら操作完了。'}
+            panel.status.config(text=('RTSP · ' if check.stage == 'COVER' else 'IR ON/OFF · ' if check.stage in ('IR_ON', 'IR_OFF') else 'IR-CUT · ') + messages[check.stage])
             panel.status_detail.place(relx=.5, rely=.82, anchor='center', relwidth=.92)
             panel.status_detail.config(text=messages[check.stage] + ('\n確認 ' + str(check.count) + '/3' if check.stage in ('BW', 'COLOR') else ''))
-            panel.ok.config(text='自動確認中', state='disabled')
-            panel.ng.config(text='RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG', state='normal' if not self.ng_preview_open else 'disabled')
+            panel.ok.config(text='操作完了 · config書込へ' if check.stage == 'IR_OFF' else 'OK', state='disabled' if check.stage == 'COVER' else 'normal')
+            panel.ng.config(text='RTSP NG' if check.stage == 'COVER' else 'IR NG' if check.stage in ('IR_ON', 'IR_OFF') else 'IR-CUT NG', state='normal' if not self.ng_preview_open else 'disabled')
             if self.mode_count == 1:
                 if panel.ok.cget('state') == 'normal':
                     panel.ok.config(text=panel.ok.cget('text') + ' [Enter]')
@@ -315,6 +331,35 @@ class BrowserInspection(engine.InspectionUI):
             if check.stage != previous:
                 self.store.update(identity, step='IR_CUT_' + check.stage)
                 console_log(f'[IR-CUT] MAC={identity} {previous}→{check.stage} {check.metrics}')
+
+    def finish_ng_direct(self, panel, category, reason, result_key):
+        camera = panel.camera
+        if camera is None:
+            return
+        identity = flow.mac(camera.mac)
+        image = panel.reader.snapshot() if panel.reader else None
+        if image is None:
+            image = engine.exterior.evidence_store.connection_failure_image(camera, reason)
+        evidence = ''
+        try:
+            evidence = self.save_evidence(camera, image, category)
+        except OSError as error:
+            console_log(f'[NG証拠保存待ち] MAC={identity} {error}')
+        self.store.update(identity, results={result_key: 'NG'})
+        self.store.finish(identity, 'NG', reason)
+        engine.save_result(camera, 'NG', '-', ng_reason=reason, evidence_path=evidence)
+        self.approved.discard(identity)
+        self.ng_count += 1
+        panel.finish('NG')
+        panel.show_result('NG', camera)
+        panel.last_camera = camera
+        panel.ok.config(state='disabled')
+        panel.ng.config(state='disabled')
+        panel.status.config(text='NG · ' + reason)
+        panel.show_message('NG · ' + reason + '\n取外して次のカメラへ', engine.COLOR_RED)
+        if self.flow_started:
+            self.watch_removal(camera, camera.ip, discover=True)
+        console_log(f'[NG終了] MAC={identity} {reason}')
 
     def start_config(self, panel):
         if self.demo:
@@ -750,8 +795,8 @@ class BrowserInspection(engine.InspectionUI):
             if panel.camera and panel.exterior_done:
                 check = self.ir_checks.get(flow.mac(panel.camera.mac))
                 if check and check.stage != 'PASS':
-                    panel.ok.config(text='自動確認中', state='disabled')
-                    panel.ng.config(text=('RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG') + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
+                    panel.ok.config(text='操作完了 · config書込へ' if check.stage == 'IR_OFF' else 'OK', state='disabled' if check.stage == 'COVER' else 'normal')
+                    panel.ng.config(text=('RTSP NG' if check.stage == 'COVER' else 'IR NG' if check.stage in ('IR_ON', 'IR_OFF') else 'IR-CUT NG') + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
 
     def watch_removal(self, camera, ip, event="ng_disconnected", discover=False):
         identity = flow.mac(camera.mac)
@@ -815,6 +860,7 @@ class BrowserInspection(engine.InspectionUI):
                 self.ir_checks[identity] = ir_cut_check.Check()
                 self.rtsp_counts.pop(identity, None)
                 self.rtsp_sample_times.pop(identity, None)
+                self.rtsp_started.pop(identity, None)
                 self.ir_frame_times.pop(identity, None)
                 record = self.store.job['devices'].get(identity.replace(':', '').upper(), {}) if self.store.job else {}
                 if record.get('results', {}).get('ir_cut') == 'OK':
@@ -1057,6 +1103,14 @@ class BrowserInspection(engine.InspectionUI):
         if self.ng_preview_open:
             raise ValueError("NG確認画面を閉じてください。")
         panel = self.panels[index]
+        if panel.camera and panel.exterior_done:
+            identity = flow.mac(panel.camera.mac)
+            check = self.ir_checks.get(identity)
+            stage = check.stage if check else 'COVER'
+            key = 'rtsp' if stage == 'COVER' else 'ir_on' if stage == 'IR_ON' else 'ir_off' if stage == 'IR_OFF' else 'ir_cut'
+            reason = {'rtsp': 'RTSP接続不可', 'ir_on': 'IR点灯不具合', 'ir_off': 'IR消灯不具合', 'ir_cut': 'IR-CUT不具合'}[key]
+            self.finish_ng_direct(panel, 'E1' if key == 'rtsp' else 'E2', reason, key)
+            return
         if panel.camera is None:
             raise ValueError("カメラがありません。")
         exterior = not panel.exterior_done
@@ -1238,6 +1292,23 @@ class BrowserInspection(engine.InspectionUI):
                 "work_prefix": base_ip.rsplit(".", 1)[0], "work_start": start,
                 "work_end": start + self.mode_count - 1}):
                 raise ValueError("作業設定の保存失敗")
+        elif action == 'rekit_device':
+            identity = flow.mac(body['mac'])
+            if identity in self.config_running or identity in self.onboarding or self.jobs.get(identity, {}).get('state') in ('sticker', 'changing') or any(
+                    p.camera and flow.mac(p.camera.mac) == identity for p in self.panels):
+                raise ValueError('このMACは検査中です。終了後に再Kittingしてください')
+            self.store.forget_device(identity)
+            self.journal.forget_device(identity)
+            self.approved.discard(identity)
+            self.working.pop(identity, None)
+            self.jobs.pop(identity, None)
+            self.config_dispatched.discard(identity)
+            self.ir_checks.pop(identity, None)
+            self.rtsp_counts.pop(identity, None)
+            self.rtsp_started.pop(identity, None)
+            self.task_generation[identity] = self.task_generation.get(identity, 0) + 1
+            console_log(f'[再Kitting] MAC={identity} キャッシュ解除 · 履歴保持')
+            self.device_scan()
         elif action == "config_confirmed":
             identity = flow.mac(body["mac"])
             if identity in self.config_running or identity in self.onboarding:
@@ -1253,6 +1324,7 @@ class BrowserInspection(engine.InspectionUI):
             self.config_dispatched.discard(identity)
             self.rtsp_counts.pop(identity, None)
             self.rtsp_sample_times.pop(identity, None)
+            self.rtsp_started.pop(identity, None)
             self.ir_frame_times.pop(identity, None)
             self.approved.discard(identity)
             self.jobs.pop(identity, None)
@@ -1422,7 +1494,7 @@ class BrowserInspection(engine.InspectionUI):
                 "image": panel.video.image is not None, "selected": self.selected_panel == panel.index,
                 "ok": panel.ok.cget("text"), "ng": panel.ng.cget("text"),
                 "can_ok": panel.ok.cget("state") == "normal" and not self.ng_preview_open and not self.demo,
-                "hide_ok": bool(panel.camera and panel.exterior_done and panel.reader),
+                "hide_ok": bool(panel.camera and panel.exterior_done and panel.reader and self.ir_checks.get(flow.mac(panel.camera.mac)) and self.ir_checks[flow.mac(panel.camera.mac)].stage == 'COVER'),
                 "can_ng": panel.ng.cget("state") == "normal" and not self.ng_preview_open and not self.demo,
                 "camera": {"ip": camera.ip, "sn": camera.sn, "mac": camera.mac,
                            "model": self.journal.data["devices"].get(flow.mac(camera.mac), {}).get("model", ""),

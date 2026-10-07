@@ -39,7 +39,7 @@ def atomic(path, data):
 
 class JobStore:
     fields = ["timestamp", "record_id", "carton", "camera_slot", "mac", "sn", "old_ip", "new_ip",
-              "result", "appearance", "network", "rtsp", "ir_cut", "settings", "tool_version"]
+              "result", "appearance", "network", "rtsp", "ir_cut", "settings", "tool_version", "ir_on", "ir_off"]
 
     def __init__(self, base):
         self.root = Path(base) / "data"
@@ -102,9 +102,23 @@ class JobStore:
             if identity not in self.job["devices"]:
                 self.job["devices"][identity] = {"camera_slot": slot, "sn": sn, "old_ip": old_ip,
                     "new_ip": new_ip, "status": "WAITING", "step": "DISCOVERY", "results": {},
-                    "record_id": self.job["job_id"] + "-" + self.job["carton"] + "-" + identity}
+                    "record_id": self.job["job_id"] + "-" + self.job["carton"] + "-" + identity +
+                        ("-retry" + str(self.job.get('rekit_attempts', {}).get(identity)) if self.job.get('rekit_attempts', {}).get(identity) else '')}
                 self.save()
             return self.job["devices"][identity]
+
+    def forget_device(self, mac):
+        with self.lock:
+            if not self.job:
+                return
+            identity = key(mac)
+            device = self.job['devices'].get(identity)
+            if device:
+                atomic(self.root / 'history' / (datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '_rekit_' + identity + '.json'), device)
+                self.job['devices'].pop(identity)
+                attempts = self.job.setdefault('rekit_attempts', {})
+                attempts[identity] = attempts.get(identity, 0) + 1
+                self.save()
 
     def update(self, mac, **changes):
         with self.lock:
@@ -140,7 +154,18 @@ class JobStore:
             rows = []
             if path.exists():
                 with path.open(encoding="utf-8-sig", newline="") as stream:
-                    rows = list(csv.DictReader(stream))
+                    reader = csv.DictReader(stream)
+                    rows = list(reader)
+                    old_fields = reader.fieldnames
+                if old_fields != self.fields:
+                    temporary = path.with_name(path.name + '.schema.tmp')
+                    with temporary.open('w', encoding='utf-8-sig', newline='') as stream:
+                        writer = csv.DictWriter(stream, fieldnames=self.fields, extrasaction='ignore')
+                        writer.writeheader()
+                        writer.writerows(rows)
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    os.replace(temporary, path)
             if not any(r["record_id"] == row["record_id"] for r in rows):
                 with path.open("a", encoding="utf-8-sig", newline="") as stream:
                     writer = csv.DictWriter(stream, fieldnames=self.fields, extrasaction="ignore")

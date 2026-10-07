@@ -18,8 +18,9 @@ function doPost(e) {
     const book = SpreadsheetApp.openById(id);
     const sheet = book.getSheetByName('CameraResults') || book.insertSheet('CameraResults');
     const fields = ['timestamp','record_id','carton','camera_slot','mac','sn','old_ip','new_ip',
-      'result','appearance','network','rtsp','ir_cut','settings','tool_version'];
+      'result','appearance','network','rtsp','ir_cut','settings','tool_version','ir_on','ir_off'];
     if (sheet.getLastRow() === 0) sheet.appendRow(fields);
+    else sheet.getRange(1, 1, 1, fields.length).setValues([fields]);
     let existingRow = 0;
     if (sheet.getLastRow() > 1) {
       const ids = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getValues();

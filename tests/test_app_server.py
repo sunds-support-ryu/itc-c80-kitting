@@ -93,21 +93,15 @@ class BrowserTests(unittest.TestCase):
         self.assertTrue(self.app.panels[0].exterior_done)
         self.assertIsNone(self.app.preview)
 
-    def test_rtsp_other_reason_cancel_and_invalid_actions(self):
-        self.app.command({"action": "ok", "index": 0})
-        self.app.command({"action": "ng", "index": 0})
-        self.app.command({"action": "cancel_ng"})
-        self.assertIsNotNone(self.app.panels[0].camera)
-        self.app.command({"action": "ng", "index": 0})
-        with self.assertRaises(ValueError):
-            self.app.command({"action": "save_ng", "category": "Z", "reason": ""})
-        with patch.object(self.app, "save_evidence", return_value="evidence/Z-test.jpg"), patch.object(web.engine, "save_result") as record:
-            self.app.command({"action": "save_ng", "category": "Z", "reason": "映像ノイズ"})
-            self.assertEqual(record.call_args.kwargs["ng_reason"], "映像ノイズ")
+    def test_rtsp_ng_finishes_immediately_and_records_reason(self):
+        self.app.command({'action':'ok','index':0})
+        self.app.panels[0].reader.last_status = 'RTSP NG / reconnecting'
+        with patch.object(self.app, 'save_evidence', return_value='E1-test.jpg'), patch.object(web.engine, 'save_result') as record:
+            self.app.poll_ir_cut()
         self.assertIsNone(self.app.panels[0].camera)
         self.assertEqual(self.app.ng_count, 1)
-        with self.assertRaises(ValueError):
-            self.app.command({"action": "ok", "index": 7})
+        self.assertIsNone(self.app.preview)
+        self.assertEqual(record.call_args.kwargs['ng_reason'], 'RTSP接続不可')
 
     def test_damage_is_distinct_reason_but_keeps_b_evidence_prefix(self):
         self.app.command({'action': 'ng', 'index': 0})
@@ -134,10 +128,12 @@ class BrowserTests(unittest.TestCase):
             self.advance_rtsp()
             check = self.app.ir_checks[web.flow.mac(self.camera.mac)]
             self.assertEqual(check.stage, 'BW')
-            self.assertTrue(self.app.snapshot()['panels'][0]['hide_ok'])
-            self.assertEqual(self.app.panels[0].ok.cget('state'), 'disabled')
+            self.assertFalse(self.app.snapshot()['panels'][0]['hide_ok'])
+            self.assertEqual(self.app.panels[0].ok.cget('state'), 'normal')
             check.stage = 'PASS'
             self.app.poll_ir_cut()
+            start.assert_not_called()
+            for _ in range(3): self.app.command({'action':'ok','index':0})
             start.assert_called_once_with(self.app.panels[0])
 
     def advance_rtsp(self):
@@ -174,6 +170,8 @@ class BrowserTests(unittest.TestCase):
                 reader.latest_frame_time = now
                 with patch.object(reader,'snapshot',return_value=Image.new('RGB',(160,90),color)), patch.object(web.time,'monotonic',return_value=now):
                     self.app.poll_ir_cut()
+            self.assertEqual(write.call_count, 0)
+            for _ in range(3): self.app.command({'action':'ok','index':0})
             deadline = time.monotonic()+3
             while self.app.config_running and time.monotonic()<deadline: time.sleep(.01)
             self.app.poll()
@@ -421,14 +419,15 @@ class BrowserTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.app.command({"action": "settings", "usb": 0})
 
-    def test_rtsp_discard_still_requires_ng_classification(self):
-        self.app.command({"action": "ok", "index": 0})
-        self.app.command({"action": "ng", "index": 0})
-        with patch.object(self.app, "save_evidence") as save, patch.object(web.engine, "save_result") as record:
-            self.app.command({"action": "save_ng", "category": "E2", "discard": True})
-            save.assert_not_called()
-            self.assertEqual(record.call_args.kwargs["evidence_path"], "")
-            self.assertEqual(record.call_args.kwargs["ng_reason"], "IR-CUT不具合")
+    def test_ir_manual_ng_does_not_open_dialog_or_write_config(self):
+        self.app.command({'action':'ok','index':0})
+        self.advance_rtsp()
+        with patch.object(self.app, 'start_config') as start, patch.object(self.app, 'save_evidence', return_value='E2-test.jpg'), patch.object(web.engine,'save_result') as record:
+            self.app.command({'action':'ng','index':0})
+        start.assert_not_called()
+        self.assertIsNone(self.app.preview)
+        self.assertIsNone(self.app.panels[0].camera)
+        self.assertEqual(record.call_args.kwargs['ng_reason'], 'IR-CUT不具合')
 
     def test_http_command_requires_local_host_and_token(self):
         runtime = types.SimpleNamespace(call=lambda kind, arg=None: {"panels": []} if kind == "state" else None)

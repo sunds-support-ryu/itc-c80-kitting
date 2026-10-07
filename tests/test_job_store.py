@@ -92,6 +92,29 @@ class JobTests(unittest.TestCase):
         self.store.finish(self.mac, "NG")
         self.assertEqual(self.store.carton_count("0012"), 0)
 
+    def test_rekit_preserves_ng_history_and_uses_new_record_id(self):
+        self.store.finish(self.mac, 'NG')
+        old_id = self.store.job['devices']['020000000002']['record_id']
+        self.store.forget_device(self.mac)
+        device = self.store.device(self.mac, 1, 'SN1', '192.168.0.150', '192.168.0.220')
+        self.assertNotEqual(device['record_id'], old_id)
+        self.store.update(self.mac, results={'ir_on':'OK','ir_off':'OK'})
+        self.store.finish(self.mac, 'OK')
+        with (self.store.root/'result.csv').open(encoding='utf-8-sig') as stream:
+            rows = list(csv.DictReader(stream))
+        self.assertEqual([row['result'] for row in rows], ['NG','OK'])
+        self.assertEqual(rows[-1]['ir_off'], 'OK')
+
+    def test_existing_csv_gains_ir_columns_without_losing_history(self):
+        with (self.store.root/'result.csv').open('w',encoding='utf-8-sig',newline='') as stream:
+            writer = csv.DictWriter(stream,fieldnames=['record_id','result','carton'])
+            writer.writeheader();writer.writerow({'record_id':'old','result':'NG','carton':'0012'})
+        self.store.finish(self.mac, 'OK')
+        with (self.store.root/'result.csv').open(encoding='utf-8-sig') as stream:
+            rows = list(csv.DictReader(stream))
+        self.assertEqual(rows[0]['record_id'], 'old')
+        self.assertIn('ir_on', rows[1])
+
     def test_user_retry_corrects_existing_record_without_duplicate_append(self):
         self.store.finish(self.mac, "ERROR")
         self.store.finish(self.mac, "OK")
