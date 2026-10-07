@@ -163,7 +163,7 @@ def discover_interfaces():
     for interface in get_working_ifaces():
         try:
             address = get_if_addr(interface)
-            if address == "0.0.0.0" or address.startswith("127."):
+            if address.startswith("127."):
                 continue
             found.append({"id": getattr(interface, "network_name", str(interface)),
                           "name": getattr(interface, "description", str(interface)),

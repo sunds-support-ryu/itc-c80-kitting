@@ -27,12 +27,27 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(result["prefix_length"], 24)
         self.assertEqual(result["gateway"], "192.168.0.1")
 
-    def test_ambiguous_current_ips_are_not_guessed(self):
+    def test_multiple_current_ips_are_preserved_on_one_nic(self):
         record = {"mac": "02:00:00:00:00:10", "ip": "192.168.5.102"}
         details = {record["mac"]: {"ip": ["192.168.0.100", "192.168.1.100"],
                                    "prefix": [24, 24]}}
         with patch.object(flow, "windows_network_details", return_value=details):
-            self.assertFalse(flow.enrich_interfaces([record])[0]["prefix_verified"])
+            updated = flow.enrich_interfaces([record])[0]
+            self.assertTrue(updated['prefix_verified'])
+            self.assertEqual([x['ip'] for x in updated['ipv4']], ['192.168.0.100', '192.168.1.100'])
+
+    def test_work_pool_uses_secondary_address_without_changing_nic(self):
+        record = {'id': 'same-adapter', 'mac': '02:00:00:00:00:10', 'ip': '192.168.0.10',
+                  'prefix_length': 24, 'gateway': '192.168.0.1', 'gateways': ['192.168.0.1'],
+                  'ipv4': [{'ip': '192.168.0.10', 'prefix_length': 24}, {'ip': '192.168.5.10', 'prefix_length': 24}]}
+        settings = {'work_prefix': '192.168.5'}
+        selected = flow.select_work_interface(settings, record)
+        self.assertEqual(selected['id'], 'same-adapter')
+        self.assertEqual(selected['ip'], '192.168.5.10')
+        self.assertEqual(selected['gateway'], '')
+        self.assertEqual(flow.network_config(settings, record)['work'][0], '192.168.5.150')
+        self.assertEqual(flow.arp_source_ip(record, '192.168.0.10', '192.168.5.150'), '192.168.5.10')
+        self.assertEqual(flow.arp_source_ip(record, '192.168.0.10', '192.168.9.150'), '192.168.0.10')
 
     def setUp(self):
         self.interface = {"ip": "192.168.23.33", "prefix_length": 24, "gateway": "192.168.23.1"}

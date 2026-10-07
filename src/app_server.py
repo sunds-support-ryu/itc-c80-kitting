@@ -539,6 +539,7 @@ class BrowserInspection(engine.InspectionUI):
         if not getattr(self, "resuming", False) and any(job.get("state") in ("sticker", "changing") for job in self.journal.data["assignments"].values()):
             raise ValueError("未完了のIP割当記録があります。記録を確認してから開始してください")
         interface = flow.enrich_interfaces([dict(interface)])[0]
+        interface = flow.select_work_interface(self.settings, interface)
         console_log(f"[Network] {interface}")
         if os.name == "nt" and not interface.get("prefix_verified"):
             raise ValueError("PCのサブネット情報を確認できません。ネットワークを再検索してください")

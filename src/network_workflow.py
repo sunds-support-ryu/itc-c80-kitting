@@ -35,6 +35,7 @@ def prefix(value):
 
 
 def network_config(settings, interface):
+    interface = select_work_interface(settings, interface)
     pc = ipaddress.IPv4Address(interface["ip"])
     pc_network = ipaddress.IPv4Network(f"{pc}/{interface.get('prefix_length', 24)}", strict=False)
     work_prefix = prefix(settings.get("work_prefix") or str(pc).rsplit(".", 1)[0])
@@ -87,13 +88,15 @@ def enrich_interfaces(records):
         lengths = detail.get("prefix", [])
         addresses = addresses if isinstance(addresses, list) else [addresses]
         lengths = lengths if isinstance(lengths, list) else [lengths]
+        record['ipv4'] = [{'ip': address, 'prefix_length': int(lengths[index])}
+                          for index, address in enumerate(addresses) if address and index < len(lengths)]
         record["prefix_verified"] = False
         # A saved interface IP can be stale after Windows network settings change.
         # Match the adapter by MAC, then refresh from its current IPv4 addresses.
         if record["ip"] not in addresses:
             candidates = [address for address in addresses if address and
                           not ipaddress.IPv4Address(address).is_link_local]
-            if len(candidates) == 1:
+            if candidates:
                 record["ip"] = candidates[0]
             elif len(addresses) == 1 and addresses[0]:
                 record["ip"] = addresses[0]
@@ -104,8 +107,40 @@ def enrich_interfaces(records):
                 record["prefix_verified"] = True
         record.setdefault("prefix_length", 24)
         gateways = detail.get("gateway") or ""
+        record['gateways'] = gateways if isinstance(gateways, list) else [gateways] if gateways else []
         record["gateway"] = gateways[0] if isinstance(gateways, list) and gateways else gateways
     return records
+
+
+def select_work_interface(settings, interface):
+    """NIC identity stays fixed; choose one of its addresses for the work subnet."""
+    result = dict(interface)
+    addresses = interface.get('ipv4') or [{'ip': interface['ip'], 'prefix_length': interface.get('prefix_length', 24)}]
+    requested = settings.get('work_prefix')
+    if requested:
+        segment = prefix(requested)
+        first = ipaddress.IPv4Address(f"{segment}.{int(settings.get('work_start', 150))}")
+        last = ipaddress.IPv4Address(f"{segment}.{int(settings.get('work_end', 189))}")
+        candidates = [item for item in addresses if first in ipaddress.IPv4Network(f"{item['ip']}/{item['prefix_length']}", strict=False)
+                      and last in ipaddress.IPv4Network(f"{item['ip']}/{item['prefix_length']}", strict=False)]
+        if not candidates:
+            raise ValueError('このネットワーク接続のIPから作業IPへ接続できません。Base IPを確認してください')
+        candidates.sort(key=lambda item: (item['ip'].rsplit('.', 1)[0] != segment, -item['prefix_length']))
+        selected = candidates[0]
+    else:
+        selected = next((item for item in addresses if item['ip'] == interface.get('ip')), addresses[0])
+    result.update(ip=selected['ip'], prefix_length=selected['prefix_length'])
+    selected_network = ipaddress.IPv4Network(f"{selected['ip']}/{selected['prefix_length']}", strict=False)
+    gateways = interface.get('gateways', [interface.get('gateway', '')])
+    result['gateway'] = next((gateway for gateway in gateways if gateway and ipaddress.IPv4Address(gateway) in selected_network), '')
+    return result
+
+
+def arp_source_ip(interface, fallback, target):
+    address = ipaddress.IPv4Address(target)
+    candidates = [item for item in interface.get('ipv4', []) if address in
+                  ipaddress.IPv4Network(f"{item['ip']}/{item['prefix_length']}", strict=False)]
+    return max(candidates, key=lambda item: item['prefix_length'])['ip'] if candidates else fallback
 
 
 def parse_info(payload):
@@ -247,13 +282,14 @@ class Link:
         self.interface, self.stopped = interface, stopped
         self.id = interface["id"]
         self.pc_mac = mac(get_if_hwaddr(self.id))
-        self.pc_ip = get_if_addr(self.id)
-        if self.pc_mac != mac(interface["mac"]) or (verify_ip and self.pc_ip != interface["ip"]):
-            raise ValueError("PCのネットワーク設定が変更されています。ネットワークを再検索してください")
+        self.pc_ip = interface['ip'] if verify_ip else get_if_addr(self.id)
+        if self.pc_mac != mac(interface["mac"]):
+            raise ValueError("選択したネットワーク接続のMACが変更されています。ネットワークを再検索してください")
 
     def arp(self, ip, target_mac=None):
+        source_ip = arp_source_ip(getattr(self, 'interface', {}), self.pc_ip, ip)
         packet = self.Ether(src=self.pc_mac, dst=target_mac or "ff:ff:ff:ff:ff:ff") / self.ARP(
-            op=1, hwsrc=self.pc_mac, psrc=self.pc_ip, hwdst=target_mac or "00:00:00:00:00:00", pdst=ip)
+            op=1, hwsrc=self.pc_mac, psrc=source_ip, hwdst=target_mac or "00:00:00:00:00:00", pdst=ip)
         replies, _ = self.srp(packet, iface=self.id, timeout=.6, verbose=False)
         found = []
         for _, reply in replies:
@@ -261,7 +297,7 @@ class Link:
                 arp = reply[self.ARP]
                 source = mac(arp.hwsrc)
                 if (int(arp.op) == 2 and str(arp.psrc) == ip and mac(reply[self.Ether].src) == source
-                        and str(arp.pdst) == self.pc_ip and mac(arp.hwdst) == self.pc_mac
+                        and str(arp.pdst) == source_ip and mac(arp.hwdst) == self.pc_mac
                         and (target_mac is None or source == target_mac)):
                     found.append(source)
         return found
