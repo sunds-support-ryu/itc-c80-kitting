@@ -4,6 +4,7 @@
 /evidence/
 /config file/
 /launcher_settings.yaml
+/python_path.txt
 
 # Generated distributions and verification screenshots
 /release/

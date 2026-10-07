@@ -10,10 +10,20 @@ import unittest
 from unittest.mock import patch
 import yaml
 import launcher_core as core
-from launcher import configured_repository
+from launcher import configured_repository, python_command
 
 
 class LauncherTests(unittest.TestCase):
+    def test_source_launcher_keeps_its_python_instead_of_store_alias(self):
+        with patch('launcher.sys.frozen', False, create=True), patch('launcher.shutil.which', return_value='store-alias.exe') as lookup:
+            import sys
+            self.assertEqual(python_command(self.root, ''), [sys.executable])
+            lookup.assert_not_called()
+
+    def test_vbs_update_is_allowed_only_for_managed_start_script(self):
+        self.assertEqual(core.safe_path(self.root, 'start.vbs'), self.root / 'start.vbs')
+        with self.assertRaises(ValueError): core.safe_path(self.root, 'unexpected.vbs')
+
     def test_new_pc_uses_builtin_repository_without_config(self):
         for config in ({}, {'github_repository': ''}, {'github_repository': '  '}):
             self.assertEqual(configured_repository(config), 'sunds-support-ryu/itc-c80-kitting')

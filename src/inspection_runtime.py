@@ -260,14 +260,8 @@ class BrowserInspection(engine.InspectionUI):
         if panel.camera and panel.exterior_done and panel.reader:
             identity = flow.mac(panel.camera.mac)
             check = self.ir_checks.setdefault(identity, ir_cut_check.Check())
-            if check.stage in ('BW', 'COLOR', 'PASS', 'TIMEOUT'):
-                check.stage = 'IR_ON'
-                self.store.update(identity, step='IR_ON', results={'ir_cut': 'OK', 'ir_cut_method': 'manual'})
-            elif check.stage == 'IR_ON':
-                check.stage = 'IR_OFF'
-                self.store.update(identity, step='IR_OFF', results={'ir_on': 'OK'})
-            elif check.stage == 'IR_OFF':
-                self.store.update(identity, step='CONFIG', results={'ir_off': 'OK'})
+            if check.stage == 'PURPLE':
+                self.store.update(identity, step='CONFIG', results={'ir_cut': 'OK', 'ir_cut_method': 'manual'})
                 self.start_config(panel)
             else:
                 raise ValueError('RTSP確認中です')
@@ -291,7 +285,7 @@ class BrowserInspection(engine.InspectionUI):
             if check.stage == 'COVER':
                 self.rtsp_started.setdefault(identity, now)
                 if 'NG' in getattr(panel.reader, 'last_status', '') or now - self.rtsp_started[identity] >= 15:
-                    self.finish_ng_direct(panel, 'E1', 'RTSP接続不可', 'rtsp')
+                    self.finish_ng_direct(panel, 'E1', 'RTSP不具合', 'rtsp')
                     continue
                 if image is None:
                     self.rtsp_counts[identity] = 0
@@ -310,17 +304,18 @@ class BrowserInspection(engine.InspectionUI):
                 if fresh:
                     self.ir_frame_times[identity] = stamp
             if check.stage == 'PASS':
-                self.store.update(identity, step='IR_CUT_CONFIRM') if previous != 'PASS' else None
-            messages = {'COVER': 'RTSP映像を確認中…', 'BW': '蓋を被ってください。',
-                        'COLOR': '蓋を外してください。', 'PASS': 'IR-CUT切替を確認し、OK / NGを選択してください。',
-                        'TIMEOUT': 'IR-CUT切替を確認し、OK / NGを選択してください。',
-                        'IR_ON': '蓋を被ってください。IRランプが点灯したらOK。',
-                        'IR_OFF': '蓋を外してください。IRランプが消灯したら操作完了。'}
-            panel.status.config(text=('RTSP · ' if check.stage == 'COVER' else 'IR ON/OFF · ' if check.stage in ('IR_ON', 'IR_OFF') else 'IR-CUT · ') + messages[check.stage])
-            panel.status_detail.place(relx=.5, rely=.82, anchor='center', relwidth=.92)
-            panel.status_detail.config(text=messages[check.stage] + ('\n確認 ' + str(check.count) + '/3' if check.stage in ('BW', 'COLOR') else ''))
-            panel.ok.config(text='操作完了 · config書込へ' if check.stage == 'IR_OFF' else 'OK', state='disabled' if check.stage == 'COVER' else 'normal')
-            panel.ng.config(text='RTSP NG' if check.stage == 'COVER' else 'IR NG' if check.stage in ('IR_ON', 'IR_OFF') else 'IR-CUT NG', state='normal' if not self.ng_preview_open else 'disabled')
+                check.stage = 'PURPLE'
+                self.store.update(identity, step='IR_CUT_CONFIRM', results={'light_sensor': 'OK'})
+            messages = {'COVER': 'RTSP接続確認中。',
+                        'BW': '操作①：蓋を被ってください。白黒への切替を自動確認します。',
+                        'COLOR': '操作②：蓋を外してください。カラーへの復帰を自動確認します。',
+                        'PURPLE': '紫色部分を目視確認してください。紫色なし：OK ／ 紫色あり：NG。',
+                        'TIMEOUT': 'IR-CUT / 光センサーの切替を確認できません。NGを押してください。'}
+            panel.status.config(text=('RTSP · ' if check.stage == 'COVER' else '紫色確認 · ' if check.stage == 'PURPLE' else 'IR-CUT / 光センサー · ') + messages[check.stage])
+            panel.status_detail.config(text=messages[check.stage])
+            panel.show_message(messages[check.stage], '#d97706' if check.stage == 'BW' else '#2563eb' if check.stage == 'COLOR' else engine.COLOR_GREEN)
+            panel.ok.config(text='OK · config書込へ', state='normal' if check.stage == 'PURPLE' else 'disabled')
+            panel.ng.config(text='RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG' if check.stage == 'PURPLE' else 'IR-CUT / 光センサー NG', state='normal' if not self.ng_preview_open else 'disabled')
             if self.mode_count == 1:
                 if panel.ok.cget('state') == 'normal':
                     panel.ok.config(text=panel.ok.cget('text') + ' [Enter]')
@@ -380,7 +375,7 @@ class BrowserInspection(engine.InspectionUI):
                 engine.step3.load_config(self.settings_dir)
                 self.store.update(identity, step='CONFIG', config_uncertain=True)
                 success, detail = engine.step3.run(camera, self.settings_dir,
-                    (engine.USERNAME, engine.PASSWORD),
+                    self.camera_credentials.get(identity, (engine.USERNAME, engine.PASSWORD)),
                     log=lambda text: (console_log(f'[config] MAC={identity} {text}'),
                         engine.event_queue.put(('step3_progress', camera.mac, text))),
                     stopped=engine.APP_STOP.is_set, reset_ip=False,
@@ -792,9 +787,9 @@ class BrowserInspection(engine.InspectionUI):
                     panel.ok.config(text="貼付完了 · IP変更", state="normal")
             if panel.camera and panel.exterior_done:
                 check = self.ir_checks.get(flow.mac(panel.camera.mac))
-                if check and check.stage != 'PASS':
-                    panel.ok.config(text='操作完了 · config書込へ' if check.stage == 'IR_OFF' else 'OK', state='disabled' if check.stage == 'COVER' else 'normal')
-                    panel.ng.config(text=('RTSP NG' if check.stage == 'COVER' else 'IR NG' if check.stage in ('IR_ON', 'IR_OFF') else 'IR-CUT NG') + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
+                if check:
+                    panel.ok.config(text='OK · config書込へ', state='normal' if check.stage == 'PURPLE' else 'disabled')
+                    panel.ng.config(text=('RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG' if check.stage == 'PURPLE' else 'IR-CUT / 光センサー NG') + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
 
     def watch_removal(self, camera, ip, event="ng_disconnected", discover=False):
         identity = flow.mac(camera.mac)
@@ -1105,8 +1100,8 @@ class BrowserInspection(engine.InspectionUI):
             identity = flow.mac(panel.camera.mac)
             check = self.ir_checks.get(identity)
             stage = check.stage if check else 'COVER'
-            key = 'rtsp' if stage == 'COVER' else 'ir_on' if stage == 'IR_ON' else 'ir_off' if stage == 'IR_OFF' else 'ir_cut'
-            reason = {'rtsp': 'RTSP接続不可', 'ir_on': 'IR点灯不具合', 'ir_off': 'IR消灯不具合', 'ir_cut': 'IR-CUT不具合'}[key]
+            key = 'rtsp' if stage == 'COVER' else 'ir_cut' if stage == 'PURPLE' else 'light_sensor'
+            reason = {'rtsp': 'RTSP不具合', 'light_sensor': 'IR-CUT / 光センサー不具合', 'ir_cut': 'IR-CUT不具合'}[key]
             self.finish_ng_direct(panel, 'E1' if key == 'rtsp' else 'E2', reason, key)
             return
         if panel.camera is None:
@@ -1492,7 +1487,8 @@ class BrowserInspection(engine.InspectionUI):
                 "image": panel.video.image is not None, "selected": self.selected_panel == panel.index,
                 "ok": panel.ok.cget("text"), "ng": panel.ng.cget("text"),
                 "can_ok": panel.ok.cget("state") == "normal" and not self.ng_preview_open and not self.demo,
-                "hide_ok": bool(panel.camera and panel.exterior_done and panel.reader and self.ir_checks.get(flow.mac(panel.camera.mac)) and self.ir_checks[flow.mac(panel.camera.mac)].stage == 'COVER'),
+                "hide_ok": bool(panel.camera and panel.exterior_done and panel.reader and self.ir_checks.get(flow.mac(panel.camera.mac)) and self.ir_checks[flow.mac(panel.camera.mac)].stage != 'PURPLE'),
+                "operation_color": {'BW': '#d97706', 'COLOR': '#2563eb'}.get(self.ir_checks[flow.mac(camera.mac)].stage, '') if camera and flow.mac(camera.mac) in self.ir_checks else '',
                 "can_ng": panel.ng.cget("state") == "normal" and not self.ng_preview_open and not self.demo,
                 "camera": {"ip": camera.ip, "sn": camera.sn, "mac": camera.mac,
                            "model": self.journal.data["devices"].get(flow.mac(camera.mac), {}).get("model", ""),

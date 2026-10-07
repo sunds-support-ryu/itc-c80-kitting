@@ -27,6 +27,7 @@ def python_command(root, configured):
         if not candidate.is_file(): raise ValueError('指定したPythonがありません')
         return [str(candidate)]
     if (root / 'runtime' / 'python.exe').is_file(): return [str(root / 'runtime' / 'python.exe')]
+    if not getattr(sys, 'frozen', False): return [sys.executable]
     for command in ('py', 'python'):
         found = shutil.which(command)
         if found:
@@ -36,11 +37,12 @@ def python_command(root, configured):
                                check=True, timeout=10, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name=="nt" else 0)
                 return check
             except (OSError, subprocess.SubprocessError): pass
-    if not getattr(sys, 'frozen', False): return [sys.executable]
     raise ValueError('Python 3.9以降を設定してください（launcher_settings.yaml: python_executable）')
 
 
 def main():
+    os.environ['PYTHONUTF8'] = '1'
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
     parser = argparse.ArgumentParser()
     parser.add_argument('--self-test', action='store_true')
     parser.add_argument('--update-only', action='store_true')

@@ -3,6 +3,14 @@ import os
 import subprocess
 import sys
 
+# Redirected output on Korean Windows defaults to CP949. Japanese UI/log
+# strings must use the same UTF-8 encoding as the launcher's log file.
+os.environ['PYTHONUTF8'] = '1'
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+for output in (sys.stdout, sys.stderr):
+    if output is not None and hasattr(output, 'reconfigure'):
+        output.reconfigure(encoding='utf-8', errors='backslashreplace')
+
 
 # ============================================================
 # 設定

@@ -13,9 +13,9 @@ from launcher_core import MANAGED, save_yaml
 BASE = Path(__file__).resolve().parents[1]
 
 
-def build(version, launcher=None):
+def build(version, launcher=None, script_only=False):
     folder = BASE / 'release' / 'assets'
-    if launcher:
+    if launcher or script_only:
         folder = folder / version
     folder.mkdir(exist_ok=True)
     path = folder / 'update-manifest.yaml'
@@ -33,6 +33,11 @@ def build(version, launcher=None):
                         'asset': asset, 'size': source.stat().st_size, 'sha256': sha})
     manifest = {'schema': 1, 'version': version, 'entrypoint': 'src/bootstrap.py', 'files': entries}
     save_yaml(path, manifest)
+    if script_only:
+        from build_script_launcher import build as build_script
+        build_script()
+        print('GitHub Release assets:', folder)
+        return
     exe = Path(launcher).resolve() if launcher else BASE / 'release' / '1.0' / 'ITC-C80-Launcher-1.0.exe'
     if exe.exists():
         destination = folder / 'ITC-C80-Launcher-1.0.exe'
@@ -50,5 +55,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', default='1.0')
     parser.add_argument('--launcher', help='Path to the freshly built launcher EXE')
+    parser.add_argument('--script-only', action='store_true', help='Source/VBS release without a packaged EXE')
     args = parser.parse_args()
-    build(args.version, args.launcher)
+    build(args.version, args.launcher, args.script_only)

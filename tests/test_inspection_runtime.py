@@ -101,7 +101,7 @@ class BrowserTests(unittest.TestCase):
         self.assertIsNone(self.app.panels[0].camera)
         self.assertEqual(self.app.ng_count, 1)
         self.assertIsNone(self.app.preview)
-        self.assertEqual(record.call_args.kwargs['ng_reason'], 'RTSP接続不可')
+        self.assertEqual(record.call_args.kwargs['ng_reason'], 'RTSP不具合')
 
     def test_damage_is_distinct_reason_but_keeps_b_evidence_prefix(self):
         self.app.command({'action': 'ng', 'index': 0})
@@ -128,12 +128,12 @@ class BrowserTests(unittest.TestCase):
             self.advance_rtsp()
             check = self.app.ir_checks[web.flow.mac(self.camera.mac)]
             self.assertEqual(check.stage, 'BW')
-            self.assertFalse(self.app.snapshot()['panels'][0]['hide_ok'])
-            self.assertEqual(self.app.panels[0].ok.cget('state'), 'normal')
+            self.assertTrue(self.app.snapshot()['panels'][0]['hide_ok'])
+            self.assertEqual(self.app.panels[0].ok.cget('state'), 'disabled')
             check.stage = 'PASS'
             self.app.poll_ir_cut()
             start.assert_not_called()
-            for _ in range(3): self.app.command({'action':'ok','index':0})
+            self.app.command({'action':'ok','index':0})
             start.assert_called_once_with(self.app.panels[0])
 
     def advance_rtsp(self):
@@ -171,7 +171,7 @@ class BrowserTests(unittest.TestCase):
                 with patch.object(reader,'snapshot',return_value=Image.new('RGB',(160,90),color)), patch.object(web.time,'monotonic',return_value=now):
                     self.app.poll_ir_cut()
             self.assertEqual(write.call_count, 0)
-            for _ in range(3): self.app.command({'action':'ok','index':0})
+            self.app.command({'action':'ok','index':0})
             deadline = time.monotonic()+3
             while self.app.config_running and time.monotonic()<deadline: time.sleep(.01)
             self.app.poll()
@@ -427,7 +427,7 @@ class BrowserTests(unittest.TestCase):
         start.assert_not_called()
         self.assertIsNone(self.app.preview)
         self.assertIsNone(self.app.panels[0].camera)
-        self.assertEqual(record.call_args.kwargs['ng_reason'], 'IR-CUT不具合')
+        self.assertEqual(record.call_args.kwargs['ng_reason'], 'IR-CUT / 光センサー不具合')
 
 
 

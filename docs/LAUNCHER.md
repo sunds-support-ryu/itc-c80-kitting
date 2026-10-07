@@ -1,4 +1,20 @@
-# EXE起動とGitHub更新
+# 起動とGitHub更新
+
+## EXEを使用しない起動
+
+`start.vbs`をダブルクリックしてください。インストール済みのPythonで更新ウィンドウを開き、GitHub更新後に検査ウィンドウを起動します。独自のEXEは使用せず、コンソールも表示しません。Windowsのセキュリティ設定は変更しません。スクリプトやPython自体が管理ポリシーで禁止されているPCでは、管理者の許可が必要です。
+
+Python 3.9以降、Tk、Npcapが必要です。起動器はPyYAMLとrequestsを確認し、不足時にpipでインストールします。検査用ライブラリは従来のbootstrapで確認します。
+
+自動検出できない場合は、`start.vbs`と同じ場所に`python_path.txt`を作成し、Pythonの実行ファイルの絶対パス、または配布フォルダからの相対パスを1行で記入してください。例：`runtime\pythonw.exe`。`launcher_settings.yaml`の`python_executable`は検査側Pythonの指定として引き続き利用できます。
+
+`cscript //nologo start.vbs --self-test`で更新・相機操作なしの起動確認ができます。ログは`data/logs/script_launcher.log`と`data/logs/launcher.log`です。
+
+`python_path.txt`はUTF-8で保存してください（BOMあり／なしの両方に対応）。韓国語などを含むパスでも読み込めます。子プロセスにはUTF-8を指定し、起動ログにはPythonの版・実行ファイル・配布フォルダを記録します。起動失敗時は終了コードとログ場所を表示します。
+
+EXEなしのRelease作成：`python tools/build_release.py --version 1.1.1 --script-only`。`release/assets/1.1.1`のファイルと`release/ITC-C80-Script-Launcher.zip`を公開します。設定・検査履歴・画像・configは含みません。
+
+## 従来のEXE起動
 
 `release/native/ITC-C80-Launcher-1.0.exe`を起動します。最初にGitHubの最新Releaseを確認し、`update-manifest.yaml`のファイルバージョン・サイズ・SHA256に従って必要ファイルをダウンロードします。全部の検証後に更新して`bootstrap.py`を起動します。
 
@@ -30,6 +46,6 @@ EXE自体はPythonなしで更新チェックできます。相機検査の実�
 
 `ITC-C80-Launcher-1.0.exe --self-test` は更新モジュールの確認だけで相機を起動しません。
 `--update-only` は更新チェックのみです。
-まだReleaseを公開していないため、実際のGitHub Releaseダウンロードは検証していません。模擬Releaseでダウンロード検証・不正パス拒否・破損拒否・ロールバック・中断復旧を検証しています。
+模擬Releaseでダウンロード検証・不正パス拒否・破損拒否・ロールバック・中断復旧を検証しています。
 
 本地ウィンドウ版はwindowed EXEです。エラーはダイアログ、進捗は更新ウィンドウ、ログはdata/logsに表示・保存します。console版EXEを新しいEXEへ差し替えてください。
