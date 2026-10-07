@@ -6,7 +6,7 @@
 /launcher_settings.yaml
 
 # Generated distributions and verification screenshots
-/release_files/
+/release/
 *.exe
 *.zip
 *.png

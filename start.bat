@@ -12,14 +12,14 @@ echo.
 where py >nul 2>nul
 
 if %errorlevel%==0 (
-    py "step0.py"
+    py "src\bootstrap.py"
     goto END
 )
 
 where python >nul 2>nul
 
 if %errorlevel%==0 (
-    python "step0.py"
+    python "src\bootstrap.py"
     goto END
 )
 

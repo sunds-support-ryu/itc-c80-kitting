@@ -53,9 +53,10 @@ from PIL import Image, ImageTk, ImageDraw
 # 基本設定
 # =============================================================================
 
-BASE_DIR = os.path.relpath(os.path.dirname(__file__) or ".")
+from app_paths import APP_ROOT, CODE_DIR
+BASE_DIR = os.path.relpath(APP_ROOT)
 
-_store_spec = importlib.util.spec_from_file_location("itc_evidence_store", os.path.join(BASE_DIR, "evidence_store.py"))
+_store_spec = importlib.util.spec_from_file_location("itc_evidence_store", os.path.join(CODE_DIR, "evidence_store.py"))
 evidence_store = importlib.util.module_from_spec(_store_spec)
 _store_spec.loader.exec_module(evidence_store)
 

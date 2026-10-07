@@ -1,4 +1,4 @@
-"""Day/night detection adapted from ../test_IR-cut.py (no embedded credentials)."""
+"""Day/night detection adapted from the original test_IR-cut.py; sample: samples/ir_cut_sample.py."""
 import cv2
 import numpy as np
 

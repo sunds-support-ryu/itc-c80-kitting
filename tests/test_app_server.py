@@ -1,3 +1,6 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 """Offline browser bridge checks: no camera connection or reset."""
 import importlib.util
 from pathlib import Path
@@ -13,7 +16,7 @@ from unittest.mock import patch
 import numpy as np
 from PIL import Image
 
-spec = importlib.util.spec_from_file_location("browser_ui_tests", Path(__file__).with_name("web_ui.py"))
+spec = importlib.util.spec_from_file_location("browser_ui_tests", (Path(__file__).resolve().parents[1] / "src" / "app_server.py"))
 web = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(web)
 

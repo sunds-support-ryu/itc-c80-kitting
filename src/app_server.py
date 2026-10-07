@@ -25,12 +25,13 @@ import numpy as np
 
 from PIL import Image, ImageDraw
 
-BASE = Path(__file__).resolve().parent
-spec = importlib.util.spec_from_file_location("web_inspection_engine", BASE / "step2.py")
+from app_paths import APP_ROOT, CODE_DIR
+BASE = APP_ROOT
+spec = importlib.util.spec_from_file_location("web_inspection_engine", CODE_DIR / "inspection_engine.py")
 engine = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(engine)
 
-_flow_spec = importlib.util.spec_from_file_location("camera_network_workflow", BASE / "network_workflow.py")
+_flow_spec = importlib.util.spec_from_file_location("camera_network_workflow", CODE_DIR / "network_workflow.py")
 flow = importlib.util.module_from_spec(_flow_spec)
 _flow_spec.loader.exec_module(flow)
 _original_interfaces = engine.step3.discover_interfaces
@@ -1511,12 +1512,12 @@ def make_handler(runtime, token):
             path = urlsplit(self.path).path
             try:
                 if path == "/":
-                    page = (BASE / "web" / "index.html").read_text(encoding="utf-8").replace("__TOKEN__", token)
+                    page = (CODE_DIR / "web" / "index.html").read_text(encoding="utf-8").replace("__TOKEN__", token)
                     self.respond(200, page.encode(), "text/html; charset=utf-8")
                 elif path == "/api/state":
                     self.respond(200, json.dumps(runtime.call("state"), ensure_ascii=False).encode(), "application/json; charset=utf-8")
                 elif path == "/api/gas-example":
-                    self.respond(200, (BASE / "GAS_RECEIVER.gs").read_bytes(), "text/plain; charset=utf-8")
+                    self.respond(200, (BASE / "examples" / "gas_receiver.gs").read_bytes(), "text/plain; charset=utf-8")
                 elif path.startswith("/api/image/"):
                     key = path.rsplit("/", 1)[-1]
                     if key not in ("0", "1", "2", "3", "4", "5", "preview"):

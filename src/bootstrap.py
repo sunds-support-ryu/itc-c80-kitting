@@ -8,7 +8,7 @@ import sys
 # 設定
 # ============================================================
 
-TARGET_SCRIPT = "web_ui.py"
+TARGET_SCRIPT = "app_server.py"
 
 # import名 : pipパッケージ名
 REQUIRED_MODULES = {
@@ -160,7 +160,7 @@ def check_tkinter():
 
 def start_step2():
 
-    base_dir = os.path.relpath(os.path.dirname(__file__) or ".")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
 
     script_path = os.path.join(
         base_dir,
@@ -178,7 +178,7 @@ def start_step2():
         )
 
         print(
-            "step0.py と web_ui.py を"
+            "bootstrap.py と app_server.py を"
         )
 
         print(

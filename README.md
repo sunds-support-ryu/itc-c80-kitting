@@ -1,30 +1,46 @@
 # ITC-C80 Camera Kitting Tool
 
-Python backend and local HTML interface for MAC-based camera discovery, USB appearance inspection, RTSP/IR-CUT confirmation, config import and final IP assignment.
+MAC-based discovery, USB appearance inspection, automatic IR-CUT checks, config import, final IP allocation and GAS reporting.
 
-- [Inspection and recovery](JOB_WORKFLOW.md)
-- [HTML interface](WEB_UI.md)
-- [Evidence layout](SAVE_LAYOUT.md)
-- [EXE launcher and GitHub updates](LAUNCHER.md)
+```text
+src/          Application and launcher source
+tests/       Offline automated tests
+samples/      Hardware test/demo scripts
+examples/     GAS receiver and configuration examples
+tools/        Build and release scripts
+docs/         Operating instructions
+release/      Generated EXE, ZIP and GitHub release assets
+data/         Local job state, logs and build cache (private)
+records/      Local credentials and history (private)
+evidence/     Inspection images (private)
+config file/  Camera config (private)
+```
 
 ## Start
 
-Use `start.bat`, or build/use `ITC-C80 Launcher.exe`. Python 3.9+ and Npcap are required for camera operations. Put the exported config in `config file/`. Access credentials and network settings are entered in the application's settings dialog. Password defaults are empty; local settings are excluded from Git.
+Use `start.bat` or `release/1.0/ITC-C80-Launcher-1.0.exe`. The launcher finds the project root and starts `src/bootstrap.py` after checking updates. Camera operations need Python 3.9+ and Npcap. Configure credentials and network settings in the application; put the camera config in `config file/`. Existing production folders remain at the project root.
 
-Copy `launcher_settings.example.yaml` to `launcher_settings.yaml` and fill in the GitHub repository after creating it.
+Copy `examples/launcher_settings.yaml` to `launcher_settings.yaml` if needed.
 
 ## Validation
 
 ```powershell
-python -m unittest discover -s . -p 'test_*.py'
+python -m unittest discover -s tests -p 'test_*.py'
+python samples/ir_cut_sample.py --ip 192.168.0.150
 ```
 
-Tests use simulated devices. `hardware_smoke.py --run` and `hardware_finish.py` perform real device writes and are for explicitly authorized hardware verification.
+Automated tests use simulated devices. The device flow and final IP samples write to real cameras and require explicit hardware-test authorization.
 
-## GitHub releases
+## Build
 
 ```powershell
-python build_release.py --version 2.1.0
+./tools/build_launcher.ps1
+python tools/build_release.py --version 1.0
 ```
 
-Upload the generated files in `release_files/` as release assets. Never commit or upload `records/`, `data/`, `evidence/`, `config file/`, or local credential settings. Generated EXE/ZIP files belong in Release assets rather than source history.
+Release assets are generated in `release/assets/`; initial distribution is `release/ITC-C80-Portable.zip`. Never publish local credentials, production records, images or camera config.
+
+- [Inspection workflow](docs/JOB_WORKFLOW.md)
+- [HTML interface](docs/WEB_UI.md)
+- [Evidence layout](docs/SAVE_LAYOUT.md)
+- [Launcher](docs/LAUNCHER.md)

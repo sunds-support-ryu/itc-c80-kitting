@@ -1,3 +1,6 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 """Offline IP planning and reservation checks; never sends network packets."""
 import importlib.util
 from pathlib import Path
@@ -7,7 +10,7 @@ import unittest
 from unittest.mock import patch
 import types
 
-spec = importlib.util.spec_from_file_location("workflow_tests", Path(__file__).with_name("network_workflow.py"))
+spec = importlib.util.spec_from_file_location("workflow_tests", (Path(__file__).resolve().parents[1] / "src" / "network_workflow.py"))
 flow = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(flow)
 

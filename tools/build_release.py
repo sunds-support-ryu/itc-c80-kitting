@@ -1,3 +1,6 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 """Build versioned GitHub Release assets; never includes production data or passwords."""
 import argparse
 import hashlib
@@ -7,11 +10,11 @@ import zipfile
 import yaml
 from launcher_core import MANAGED, save_yaml
 
-BASE = Path(__file__).resolve().parent
+BASE = Path(__file__).resolve().parents[1]
 
 
 def build(version):
-    folder = BASE / 'release_files'
+    folder = BASE / 'release' / 'assets'
     folder.mkdir(exist_ok=True)
     path = folder / 'update-manifest.yaml'
     previous = yaml.safe_load(path.read_text(encoding='utf-8')) if path.exists() else {}
@@ -26,16 +29,14 @@ def build(version):
         shutil.copy2(source, folder / asset)
         entries.append({'path': relative, 'version': prior.get('version', version) if prior.get('sha256') == sha else version,
                         'asset': asset, 'size': source.stat().st_size, 'sha256': sha})
-    manifest = {'schema': 1, 'version': version, 'entrypoint': 'step0.py', 'files': entries}
+    manifest = {'schema': 1, 'version': version, 'entrypoint': 'src/bootstrap.py', 'files': entries}
     save_yaml(path, manifest)
-    save_yaml(BASE / 'update-manifest.yaml', manifest)
-    executables = [path for path in [BASE / 'ITC-C80 Launcher.exe', *BASE.glob('ITC-C80 Launcher-*.exe')] if path.exists()]
-    if executables:
-        exe = max(executables, key=lambda path: path.stat().st_mtime)
-        shutil.copy2(exe, folder / 'ITC-C80 Launcher.exe')
-        with zipfile.ZipFile(BASE / 'ITC-C80-Launcher-Portable.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
-            bundle.write(exe, 'ITC-C80 Launcher.exe')
-            bundle.write(BASE / 'launcher_settings.yaml', 'launcher_settings.yaml')
+    exe = BASE / 'release' / '1.0' / 'ITC-C80-Launcher-1.0.exe'
+    if exe.exists():
+        shutil.copy2(exe, folder / exe.name)
+        with zipfile.ZipFile(BASE / 'release' / 'ITC-C80-Portable.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
+            bundle.write(exe, exe.name)
+            bundle.write(BASE / 'examples/launcher_settings.yaml', 'launcher_settings.yaml')
             bundle.write(path, 'update-manifest.yaml')
             for relative in sorted(MANAGED): bundle.write(BASE / relative, relative)
     print('GitHub Release assets:', folder)
@@ -43,5 +44,5 @@ def build(version):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--version', default='2.1.0')
+    parser.add_argument('--version', default='1.0')
     build(parser.parse_args().version)

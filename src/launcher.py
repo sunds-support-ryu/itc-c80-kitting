@@ -40,7 +40,8 @@ def main():
         from launcher_core import MANAGED
         print('ITC-C80 Launcher 1.0 / YAML / GitHub updater OK / managed files=' + str(len(MANAGED)))
         return 0
-    root = Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve().parent
+    location = Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve().parent
+    root = next((folder for folder in (location, *location.parents) if (folder / 'src/bootstrap.py').is_file()), location)
     os.chdir(root)
     config_path = root / 'launcher_settings.yaml'
     config = yaml.safe_load(config_path.read_text(encoding='utf-8')) if config_path.exists() else {}
@@ -63,7 +64,7 @@ def main():
                     if (root / 'data' / 'updates' / 'transaction.yaml').exists():
                         print('[NG] 更新の復旧が未完了です。現在版も起動しません')
                         return 1
-                    if args.update_only or not (root / 'step0.py').exists(): return 1
+                    if args.update_only or not (root / 'src/bootstrap.py').exists(): return 1
                     if input('現在版を起動しますか？ [y/N]: ').strip().lower() != 'y': return 1
                 finally: updater.close()
             else:
@@ -71,7 +72,7 @@ def main():
         if args.update_only: return 0
         command = python_command(root, str(config.get('python_executable') or '').strip())
         print('[Start] Camera Inspection')
-        return subprocess.run(command + [str(root / 'step0.py')], cwd=root).returncode
+        return subprocess.run(command + [str(root / 'src/bootstrap.py')], cwd=root).returncode
 
 
 if __name__ == '__main__':

@@ -8,11 +8,12 @@ import importlib.util
 import json
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
+from app_paths import APP_ROOT, CODE_DIR
+BASE = APP_ROOT
 
 
 def load_module(name, filename):
-    spec = importlib.util.spec_from_file_location(name, BASE / filename)
+    spec = importlib.util.spec_from_file_location(name, CODE_DIR / filename)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -24,7 +25,7 @@ def main():
     parser.add_argument("--no-cache", action="store_true")
     args = parser.parse_args()
     network = load_module("l2_info_network", "network_workflow.py")
-    settings_api = load_module("l2_info_settings", "step3.py")
+    settings_api = load_module("l2_info_settings", "config_import.py")
     settings = settings_api.load_settings(str(BASE))
     interface_id = args.interface or settings.get("network_id")
     if not interface_id:

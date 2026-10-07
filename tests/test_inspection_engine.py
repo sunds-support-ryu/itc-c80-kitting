@@ -1,3 +1,6 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 """Headless regression tests; no physical camera resets or video connections."""
 import asyncio
 import csv
@@ -72,7 +75,7 @@ class USBReader:
 
 class InspectionTests(unittest.TestCase):
     def setUp(self):
-        spec = importlib.util.spec_from_file_location("inspection_test_module", Path(__file__).with_name("step2.py"))
+        spec = importlib.util.spec_from_file_location("inspection_test_module", (Path(__file__).resolve().parents[1] / "src" / "inspection_engine.py"))
         self.m = importlib.util.module_from_spec(spec)
         with patch.dict(sys.modules, {name: types.ModuleType(name) for name in ("aiohttp", "cv2")}):
             spec.loader.exec_module(self.m)
@@ -370,7 +373,7 @@ class InspectionTests(unittest.TestCase):
             result.assert_not_called()
             self.assertFalse(self.app.ng_preview_open)
             self.app.preview_ng = lambda camera, image: "save"
-            with tempfile.TemporaryDirectory() as directory, patch.object(self.m, "__file__", str(Path(directory) / "step2.py")):
+            with tempfile.TemporaryDirectory() as directory, patch.object(self.m, "APP_ROOT", Path(directory)):
                 self.app.mark_ng(0)
                 paths = list(Path(directory).glob("evidence/*/Z/Z-SN0_*.png"))
                 self.assertEqual(len(paths), 1)

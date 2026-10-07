@@ -1,3 +1,6 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import unittest
 import numpy as np
 from ir_cut_check import Check, analyze_frame

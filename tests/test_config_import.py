@@ -1,3 +1,6 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 """オフライン検証。実機への書込・Resetは実行しない。"""
 import base64
 import importlib.util
@@ -13,7 +16,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.asymmetric import rsa, padding as rsa_padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-spec = importlib.util.spec_from_file_location("step3_test_module", Path(__file__).with_name("step3.py"))
+spec = importlib.util.spec_from_file_location("step3_test_module", (Path(__file__).resolve().parents[1] / "src" / "config_import.py"))
 step3 = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(step3)
 

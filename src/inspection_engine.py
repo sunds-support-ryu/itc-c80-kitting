@@ -137,6 +137,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from app_paths import APP_ROOT, CODE_DIR
 from urllib.parse import quote
 from collections import deque
 from datetime import datetime
@@ -150,13 +151,13 @@ from PIL import Image, ImageTk
 
 # 直接実行・テストのどちらでも同じStep1実装を利用する。
 _step1_spec = importlib.util.spec_from_file_location(
-    "itc_exterior", os.path.join(os.path.relpath(os.path.dirname(__file__) or "."), "step1.py"))
+    "itc_exterior", os.path.join(CODE_DIR, "appearance_inspection.py"))
 exterior = importlib.util.module_from_spec(_step1_spec)
 _step1_spec.loader.exec_module(exterior)
 
 
 _step3_spec = importlib.util.spec_from_file_location(
-    "itc_step3", os.path.join(os.path.relpath(os.path.dirname(__file__) or "."), "step3.py"))
+    "itc_step3", os.path.join(CODE_DIR, "config_import.py"))
 step3 = importlib.util.module_from_spec(_step3_spec)
 _step3_spec.loader.exec_module(step3)
 
@@ -231,7 +232,7 @@ WEB_START_WAIT = 2
 # CSV
 # =============================================================================
 
-CSV_FILE = os.path.join(os.path.relpath(os.path.dirname(__file__) or "."), "records", "camera_inspection.csv")
+CSV_FILE = os.path.join(os.path.relpath(APP_ROOT), "records", "camera_inspection.csv")
 
 
 # =============================================================================
@@ -1333,7 +1334,7 @@ async def step3_worker(session):
             camera = await asyncio.wait_for(STEP3_QUEUE.get(), timeout=1)
         except asyncio.TimeoutError:
             continue
-        base_dir = os.path.relpath(os.path.dirname(__file__) or ".")
+        base_dir = os.path.relpath(APP_ROOT)
         success, detail = await asyncio.to_thread(
             step3.run, camera, base_dir, (USERNAME, PASSWORD),
             lambda text: progress(camera, text),
@@ -1923,7 +1924,7 @@ class InspectionUI:
         self.usb_events = queue.Queue()
         self.usb_selected = None
         self.usb_devices = {}
-        self.settings_dir = os.path.relpath(os.path.dirname(__file__) or ".")
+        self.settings_dir = os.path.relpath(APP_ROOT)
         self.settings = step3.load_settings(self.settings_dir)
         self.network_events = queue.Queue()
         self.network_scanning = False
@@ -2382,7 +2383,7 @@ class InspectionUI:
 
 
         try:
-            step3.load_config(os.path.relpath(os.path.dirname(__file__) or "."))
+            step3.load_config(os.path.relpath(APP_ROOT))
         except (OSError, step3.Step3Error) as error:
             messagebox.showerror("Step3設定ファイル", str(error), parent=self.root)
             return
@@ -2659,7 +2660,7 @@ class InspectionUI:
         return result["choice"]
 
     def save_evidence(self, camera, image, category="Z"):
-        directory = os.path.join(os.path.relpath(os.path.dirname(__file__) or "."), "evidence")
+        directory = os.path.join(os.path.relpath(APP_ROOT), "evidence")
         return exterior.evidence_store.save_image(directory, category, camera, image)
 
     def mark_ng(self, index=None):
@@ -2903,7 +2904,7 @@ class InspectionUI:
 
 def main():
 
-    exterior.evidence_store.organize_records(os.path.relpath(os.path.dirname(__file__) or "."))
+    exterior.evidence_store.organize_records(os.path.relpath(APP_ROOT))
 
     root = tk.Tk()
 

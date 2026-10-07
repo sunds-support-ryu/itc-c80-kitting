@@ -1,3 +1,6 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 """Offline GitHub assets, hash failure, rollback and protected user files."""
 import hashlib
 import json
@@ -14,7 +17,7 @@ class LauncherTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.names = ['step0.py', 'web_ui.py', 'web/index.html']
+        self.names = ['src/bootstrap.py', 'src/app_server.py', 'src/web/index.html']
         self.entries, self.assets, self.responses = [], [], {}
         for name in self.names:
             dst = self.root / name
@@ -28,7 +31,7 @@ class LauncherTests(unittest.TestCase):
             self.assets.append({'name': asset, 'browser_download_url': url, 'url': url})
             self.responses[url] = content
         self.assets.append({'name': 'update-manifest.yaml', 'url': 'https://example.com/manifest', 'browser_download_url': 'https://example.com/manifest'})
-        self.manifest = {'schema': 1, 'version': '2.1.0', 'entrypoint': 'step0.py', 'files': self.entries}
+        self.manifest = {'schema': 1, 'version': '2.1.0', 'entrypoint': 'src/bootstrap.py', 'files': self.entries}
         self.updater = core.Updater(self.root, 'owner/repo', log=lambda text: None)
         self.addCleanup(self.updater.close)
         def fetch(url, *args):
@@ -42,13 +45,13 @@ class LauncherTests(unittest.TestCase):
         records.parent.mkdir()
         records.write_text('preserve')
         self.updater.update()
-        self.assertEqual((self.root / 'step0.py').read_bytes(), b'new-step0.py')
+        self.assertEqual((self.root / 'src/bootstrap.py').read_bytes(), b'new-src/bootstrap.py')
         self.assertEqual(records.read_text(), 'preserve')
         self.assertTrue((self.root / 'data/installed_versions.yaml').exists())
         self.assertFalse((self.root / 'data/updates/transaction.yaml').exists())
 
     def test_hash_failure_never_replaces_any_code(self):
-        self.responses['https://example.com/web_ui.py'] = b'corrupt'
+        self.responses['https://example.com/src__app_server.py'] = b'corrupt'
         with self.assertRaises(ValueError): self.updater.update()
         for name in self.names: self.assertEqual((self.root / name).read_bytes(), b'old')
 
@@ -59,7 +62,7 @@ class LauncherTests(unittest.TestCase):
     def test_replace_error_rolls_back_already_replaced_code(self):
         original = core.os.replace
         def replace(source, destination):
-            if Path(destination) == self.root / 'web_ui.py': raise PermissionError('locked')
+            if Path(destination) == self.root / 'src/app_server.py': raise PermissionError('locked')
             return original(source, destination)
         with patch.object(core.os, 'replace', side_effect=replace), self.assertRaises(PermissionError):
             self.updater.update()
@@ -68,10 +71,11 @@ class LauncherTests(unittest.TestCase):
     def test_interrupted_update_recovers_before_network_check(self):
         backup = self.root / 'data/update_backups/interrupted'
         backup.mkdir(parents=True)
-        (backup / 'step0.py').write_bytes(b'old')
-        (self.root / 'step0.py').write_bytes(b'partially replaced')
+        (backup / 'src').mkdir()
+        (backup / 'src/bootstrap.py').write_bytes(b'old')
+        (self.root / 'src/bootstrap.py').write_bytes(b'partially replaced')
         core.save_yaml(self.root / 'data/updates/transaction.yaml',
-            {'backup': 'data/update_backups/interrupted', 'files': [{'path': 'step0.py', 'existed': True}]})
+            {'backup': 'data/update_backups/interrupted', 'files': [{'path': 'src/bootstrap.py', 'existed': True}]})
         self.updater.fetch = lambda *a: (_ for _ in ()).throw(OSError('offline'))
         with self.assertRaises(OSError): self.updater.update()
-        self.assertEqual((self.root / 'step0.py').read_bytes(), b'old')
+        self.assertEqual((self.root / 'src/bootstrap.py').read_bytes(), b'old')

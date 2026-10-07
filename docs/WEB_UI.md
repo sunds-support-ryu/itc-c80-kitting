@@ -16,11 +16,11 @@
 - 画像と記録は既存の `evidence/`・`records/` に保存。ブラウザに証拠画像を表示しても元の解像度で保存する。
 - 「終了」で Python サービスを終了。ブラウザのタブだけ閉じるとサービスは継続する。
 
-実機なしの表示確認: `python web_ui.py --demo`。デモでは機器操作を禁止する。
+実機なしの表示確認: `python app_server.py --demo`。デモでは機器操作を禁止する。
 
-旧 Tkinter 画面: `python step2.py`（既存の検査コードを維持）。
+旧 Tkinter 画面: `python inspection_engine.py`（既存の検査コードを維持）。
 
-HTML/CSS/JavaScript は `web/index.html`。HTTP/画面状態の橋渡しは `web_ui.py`。カメラ処理は既存の `step1.py` / `step2.py` / `step3.py` を再利用する。
+HTML/CSS/JavaScript は `web/index.html`。HTTP/画面状態の橋渡しは `app_server.py`。カメラ処理は既存の `appearance_inspection.py` / `inspection_engine.py` / `config_import.py` を再利用する。
 
 USBは候補を順番に1回ずつ試す。映像が取得できた機器を使用し、全候補失敗後は自動検索を停止。設定の「USBカメラを再検索・再試行」で再開する。設定は「接続 / IP分配 / 許可モデル / 表示」のタブで整理する。
 

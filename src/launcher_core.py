@@ -10,11 +10,11 @@ import uuid
 import requests
 import yaml
 
-MANAGED = {'step0.py', 'step1.py', 'step2.py', 'step3.py', 'web_ui.py', 'web/index.html',
-           'evidence_store.py', 'network_workflow.py', 'job_store.py', 'gas_post.py',
-           'l2_device_info.py', 'GAS_RECEIVER.gs', 'JOB_WORKFLOW.md', 'WEB_UI.md', 'SAVE_LAYOUT.md'}
-MANAGED.add('instance_lock.py')
-MANAGED.add('ir_cut_check.py')
+MANAGED = {'src/' + name for name in ('bootstrap.py', 'appearance_inspection.py', 'inspection_engine.py',
+    'config_import.py', 'app_server.py', 'evidence_store.py', 'network_workflow.py', 'job_store.py',
+    'gas_post.py', 'l2_device_info.py', 'instance_lock.py', 'ir_cut_check.py', 'app_paths.py')}
+MANAGED.update({'src/web/index.html', 'examples/gas_receiver.gs', 'docs/JOB_WORKFLOW.md', 'docs/WEB_UI.md', 'docs/SAVE_LAYOUT.md'})
+
 
 
 def safe_path(root, path):
@@ -94,8 +94,8 @@ class Updater:
         manifest = yaml.safe_load(self.fetch(asset_url(manifest_asset), 500_000, 'application/octet-stream'))
         if not isinstance(manifest, dict) or manifest.get('schema') != 1 or not isinstance(manifest.get('files'), list):
             raise ValueError('更新YAMLの形式が不正です')
-        if manifest.get('entrypoint') != 'step0.py':
-            raise ValueError('起動ファイルは step0.py のみ許可します')
+        if manifest.get('entrypoint') != 'src/bootstrap.py':
+            raise ValueError('起動ファイルは bootstrap.py のみ許可します')
         files, seen = [], set()
         import re
         for item in manifest['files']:
@@ -106,7 +106,7 @@ class Updater:
             if not item.get('version') or item.get('asset') not in assets or not isinstance(item.get('size'), int) or not 0 <= item['size'] <= 20_000_000:
                 raise ValueError('ファイルのversion / asset / sizeが不正')
             files.append((item, destination))
-        if not {'step0.py', 'web_ui.py', 'web/index.html'}.issubset(seen):
+        if not {'src/bootstrap.py', 'src/app_server.py', 'src/web/index.html'}.issubset(seen):
             raise ValueError('必須ファイルが更新YAMLにありません')
         changes = [(item, dst) for item, dst in files if not dst.exists() or digest(dst) != item['sha256']]
         self.log('Release ' + str(manifest.get('version')) + ': ' + str(len(changes)) + ' ファイルを更新')

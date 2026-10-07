@@ -9,7 +9,7 @@
 ```text
 ITC-C80修復/
 ├─ start.bat
-├─ step0.py / step1.py / step2.py / step3.py
+├─ bootstrap.py / appearance_inspection.py / inspection_engine.py / config_import.py
 ├─ config file/                導入する設定ファイルを1個だけ置く
 ├─ evidence_store.py            共通の分類・命名・保存処理
 ├─ records/

@@ -1,3 +1,6 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 """Explicit, one-shot technical verification; never writes production OK records."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -12,10 +15,10 @@ from urllib.parse import quote
 
 import cv2
 import network_workflow as flow
-import step3
+import config_import as step3
 from job_store import atomic
 
-BASE = Path(__file__).resolve().parent
+BASE = Path(__file__).resolve().parents[1]
 LOCK = threading.RLock()
 REPORT = BASE / "data" / "hardware_smoke.json"
 
