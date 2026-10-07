@@ -2,6 +2,8 @@
 import requests
 from urllib.parse import urlsplit
 
+DEFAULT_POST_URL = 'https://script.google.com/macros/s/AKfycbzYGHxJ4K7OOKWComQMW04850znk-UEuECrDNHlcaeDXiwuCTZJD-HNQFgNcGwvBo5h/exec'
+
 
 class PostError(ValueError):
     def __init__(self, message, response=None):

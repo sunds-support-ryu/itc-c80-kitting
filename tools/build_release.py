@@ -33,7 +33,9 @@ def build(version):
     save_yaml(path, manifest)
     exe = BASE / 'release' / '1.0' / 'ITC-C80-Launcher-1.0.exe'
     if exe.exists():
-        shutil.copy2(exe, folder / exe.name)
+        destination = folder / exe.name
+        if not destination.exists() or hashlib.sha256(destination.read_bytes()).digest() != hashlib.sha256(exe.read_bytes()).digest():
+            shutil.copy2(exe, destination)
         with zipfile.ZipFile(BASE / 'release' / 'ITC-C80-Portable.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
             bundle.write(exe, exe.name)
             bundle.write(BASE / 'examples/launcher_settings.yaml', 'launcher_settings.yaml')

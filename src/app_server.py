@@ -199,6 +199,9 @@ class BrowserInspection(engine.InspectionUI):
         self.ir_checks = {}
         self.ir_frame_times = {}
         super().__init__(root)
+        if not self.settings.get('post_url'):
+            self.settings['post_url'] = gas_post.DEFAULT_POST_URL
+        self.settings.setdefault('post_enabled', False)
         self.panels.extend(engine.CameraPanel(self, self.panel_area, i) for i in range(4, 6))
         self.protection_logged = set()
         for device_mac, record in self.journal.data["active_work"].items():
