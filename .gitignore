@@ -1,0 +1,21 @@
+# Local camera settings, passwords, production state and evidence
+/records/
+/data/
+/evidence/
+/config file/
+/launcher_settings.yaml
+
+# Generated distributions and verification screenshots
+/release_files/
+*.exe
+*.zip
+*.png
+*.spec
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Local environment secrets
+.env
+.env.*
