@@ -14,6 +14,7 @@ MANAGED = {'step0.py', 'step1.py', 'step2.py', 'step3.py', 'web_ui.py', 'web/ind
            'evidence_store.py', 'network_workflow.py', 'job_store.py', 'gas_post.py',
            'l2_device_info.py', 'GAS_RECEIVER.gs', 'JOB_WORKFLOW.md', 'WEB_UI.md', 'SAVE_LAYOUT.md'}
 MANAGED.add('instance_lock.py')
+MANAGED.add('ir_cut_check.py')
 
 
 def safe_path(root, path):

@@ -20,6 +20,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from job_store import JobStore
 import gas_post
+import ir_cut_check
+import numpy as np
 
 from PIL import Image, ImageDraw
 
@@ -193,6 +195,8 @@ class BrowserInspection(engine.InspectionUI):
         self.post_last_attempt = 0
         self.post_response = None
         self.post_error = ""
+        self.ir_checks = {}
+        self.ir_frame_times = {}
         super().__init__(root)
         self.panels.extend(engine.CameraPanel(self, self.panel_area, i) for i in range(4, 6))
         self.protection_logged = set()
@@ -243,6 +247,61 @@ class BrowserInspection(engine.InspectionUI):
         if camera:
             self.store.update(camera.mac, results={"appearance": "OK"}, step="PREPARE", status="TESTING")
         return super().mark_exterior_ok(index)
+
+    def mark_ok(self, index=None):
+        index = self.selected_panel if index is None else index
+        panel = self.panels[index]
+        if panel.camera and panel.exterior_done and panel.reader:
+            identity = flow.mac(panel.camera.mac)
+            check = self.ir_checks.setdefault(identity, ir_cut_check.Check())
+            if check.stage in ('COVER', 'TIMEOUT'):
+                check.start(time.monotonic())
+                self.store.update(identity, step='IR_CUT_BW', results={'ir_cut': None})
+                console_log(f'[IR-CUT 開始] MAC={identity}')
+                return
+            if check.stage != 'PASS':
+                raise ValueError('IR-CUT自動確認中です。NGは手動で選択できます')
+        return super().mark_ok(index)
+
+    def poll_ir_cut(self):
+        if self.ng_preview_open:
+            return
+        for panel in self.panels[:self.mode_count]:
+            if not panel.camera or not panel.exterior_done or not panel.reader:
+                continue
+            identity = flow.mac(panel.camera.mac)
+            check = self.ir_checks.setdefault(identity, ir_cut_check.Check())
+            image = panel.reader.snapshot()
+            stamp = getattr(panel.reader, 'latest_frame_time', None)
+            fresh = stamp is not None and stamp != self.ir_frame_times.get(identity)
+            frame = np.asarray(image) if image is not None and fresh else None
+            previous = check.stage
+            if check.stage in ('BW', 'COLOR'):
+                if fresh or image is None or time.monotonic() - check.started > 90:
+                    check.feed(frame, time.monotonic())
+                if fresh:
+                    self.ir_frame_times[identity] = stamp
+            if check.stage == 'PASS':
+                self.store.update(identity, step='CONFIG', results={'rtsp': 'OK', 'ir_cut': 'OK'})
+                panel.add_log('IR-CUT 自動OK · 黒白→カラー確認')
+                super().mark_ok(panel.index)
+                continue
+            messages = {'COVER': '蓋を被ってください。', 'BW': '黒白への切替を確認中…',
+                        'COLOR': '蓋を外してください。', 'TIMEOUT': '切替を確認できません。NG または再試行してください。'}
+            panel.status.config(text='IR-CUT · ' + messages[check.stage])
+            panel.status_detail.place(relx=.5, rely=.82, anchor='center', relwidth=.92)
+            panel.status_detail.config(text=messages[check.stage] + ('\n確認 ' + str(check.count) + '/3' if check.stage in ('BW', 'COLOR') else ''))
+            panel.ok.config(text='蓋を被せた · 開始' if check.stage == 'COVER' else '再試行' if check.stage == 'TIMEOUT' else '自動確認中',
+                            state='normal' if check.stage in ('COVER', 'TIMEOUT') and image is not None else 'disabled')
+            panel.ng.config(text='IR-CUT NG', state='normal' if not self.ng_preview_open else 'disabled')
+            if self.mode_count == 1:
+                if panel.ok.cget('state') == 'normal':
+                    panel.ok.config(text=panel.ok.cget('text') + ' [Enter]')
+                if panel.ng.cget('state') == 'normal':
+                    panel.ng.config(text='IR-CUT NG [Esc]')
+            if check.stage != previous:
+                self.store.update(identity, step='IR_CUT_' + check.stage)
+                console_log(f'[IR-CUT] MAC={identity} {previous}→{check.stage} {check.metrics}')
 
     def selected_interface(self):
         selected = self.settings.get("network_id")
@@ -463,7 +522,7 @@ class BrowserInspection(engine.InspectionUI):
                     return
                 self.config_running.add(identity)
                 try:
-                    self.store.update(camera.mac, step="CONFIG", config_uncertain=True, results={"rtsp": "OK", "ir_cut": "OK"})
+                    self.store.update(camera.mac, step="CONFIG", config_uncertain=True, results={"rtsp": "OK"})
                     success, detail = await asyncio.to_thread(engine.step3.run, camera, self.settings_dir,
                         (engine.USERNAME, engine.PASSWORD),
                         lambda text: engine.event_queue.put(("step3_progress", camera.mac, text)),
@@ -661,6 +720,12 @@ class BrowserInspection(engine.InspectionUI):
                 job = self.jobs.get(flow.mac(panel.processing_camera.mac))
                 if job and job["state"] == "sticker":
                     panel.ok.config(text="貼付完了 · IP変更", state="normal")
+            if panel.camera and panel.exterior_done:
+                check = self.ir_checks.get(flow.mac(panel.camera.mac))
+                if check and check.stage != 'PASS':
+                    label = '蓋を被せた · 開始' if check.stage == 'COVER' else '再試行' if check.stage == 'TIMEOUT' else '自動確認中'
+                    panel.ok.config(text=label + (' [Enter]' if self.mode_count == 1 and panel.ok.cget('state') == 'normal' else ''))
+                    panel.ng.config(text='IR-CUT NG' + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
 
     def watch_removal(self, camera, ip, event="ng_disconnected", discover=False):
         identity = flow.mac(camera.mac)
@@ -720,6 +785,12 @@ class BrowserInspection(engine.InspectionUI):
                     self.root.after(3000, self.device_scan)
             elif kind == "reserve_slot":
                 camera, future = value
+                identity = flow.mac(camera.mac)
+                self.ir_checks[identity] = ir_cut_check.Check()
+                self.ir_frame_times.pop(identity, None)
+                record = self.store.job['devices'].get(identity.replace(':', '').upper(), {}) if self.store.job else {}
+                if record.get('results', {}).get('ir_cut') == 'OK':
+                    self.ir_checks[identity].stage = 'PASS'
                 index = self.slot_macs.get(flow.mac(camera.mac), 0)
                 panel = self.panels[index]
                 if not future.done() and not panel.camera and not panel.processing_camera:
@@ -804,6 +875,8 @@ class BrowserInspection(engine.InspectionUI):
                     if panel.processing_camera and flow.mac(panel.processing_camera.mac) == flow.mac(camera.mac):
                         panel.status_detail.config(text="MAC監視を再確認中 · " + detail)
             elif kind == "ng_disconnected":
+                self.ir_checks.pop(flow.mac(value.mac), None)
+                self.ir_frame_times.pop(flow.mac(value.mac), None)
                 record = self.store.job["devices"].get(value.mac.replace(":", "").upper(), {}) if self.store.job else {}
                 if record.get("status") == "ERROR":
                     self.store.finish(value.mac, "ERROR", record.get("error", ""))
@@ -816,6 +889,8 @@ class BrowserInspection(engine.InspectionUI):
                         panel.finish()
             elif kind == "disconnected":
                 camera = value
+                self.ir_checks.pop(flow.mac(camera.mac), None)
+                self.ir_frame_times.pop(flow.mac(camera.mac), None)
                 self.journal.release_work(camera.mac)
                 console_log(f"[MAC保護 解除] MAC={camera.mac} 断電確認")
                 self.working.pop(flow.mac(camera.mac), None)
@@ -826,6 +901,7 @@ class BrowserInspection(engine.InspectionUI):
                         panel.finish()
                         panel.show_message("取外し確認\n次のカメラ待ち")
         super().poll()
+        self.poll_ir_cut()
         for panel in self.panels[:self.mode_count]:
             camera = panel.camera or panel.processing_camera
             if camera and self.store.job:
@@ -993,9 +1069,12 @@ class BrowserInspection(engine.InspectionUI):
                 if not (0 <= x1 < x2 <= image.width and 0 <= y1 < y2 <= image.height):
                     raise ValueError("画枠が画像範囲外です。")
                 draw.rectangle(box, outline="red", width=max(2, image.width // 300))
-            path = self.save_evidence(camera, output, "B")
-            self.store.update(camera.mac, results={"appearance": "NG"}, step="PREPARE")
-            engine.save_result(camera, "外観NG", "-", ng_reason="外観不具合", evidence_path=path)
+            if category not in ('B', 'D'):
+                raise ValueError('外観不具合 または 破損 を選択してください')
+            appearance_reason = '外観不具合' if category == 'B' else '破損'
+            path = self.save_evidence(camera, output, 'B')
+            self.store.update(camera.mac, results={"appearance": "NG", "appearance_category": appearance_reason}, step="PREPARE")
+            engine.save_result(camera, "外観NG", "-", ng_reason=appearance_reason, evidence_path=path)
             self.complete_exterior(index, "NG")
         else:
             if preview["connection_failure"]:
@@ -1007,6 +1086,8 @@ class BrowserInspection(engine.InspectionUI):
             else:
                 raise ValueError("NG分類と理由を確認してください。")
             path = "" if discard else self.save_evidence(camera, image, category)
+            if category == 'E2':
+                self.store.update(camera.mac, results={'ir_cut': 'NG'})
             self.store.finish(camera.mac, "NG", reason)
             engine.save_result(camera, "NG", "-", ng_reason=reason, evidence_path=path)
             engine.mark_completed(camera.sn)
@@ -1138,6 +1219,8 @@ class BrowserInspection(engine.InspectionUI):
             if identity in self.onboarding or identity in self.config_running:
                 raise ValueError("このMACの処理は実行中です")
             self.task_generation[identity] = self.task_generation.get(identity, 0) + 1
+            self.ir_checks.pop(identity, None)
+            self.ir_frame_times.pop(identity, None)
             self.approved.discard(identity)
             self.jobs.pop(identity, None)
             for panel in self.panels:
@@ -1301,6 +1384,7 @@ class BrowserInspection(engine.InspectionUI):
                 "status": panel.status.cget("text"), "message": panel.video.cget("text"),
                 "color": panel.video.cget("fg"), "result": panel.result_state,
                 "detail": panel.status_detail.cget("text") if panel.status_detail.visible else "",
+                "ir_prompt": panel.status_detail.cget("text") if camera and flow.mac(camera.mac) in self.ir_checks and self.ir_checks[flow.mac(camera.mac)].stage != 'PASS' and panel.reader else '',
                 "fps": panel.fps_label.cget("text") if panel.fps_label.visible else "",
                 "image": panel.video.image is not None, "selected": self.selected_panel == panel.index,
                 "ok": panel.ok.cget("text"), "ng": panel.ng.cget("text"),

@@ -29,11 +29,12 @@ def build(version):
     manifest = {'schema': 1, 'version': version, 'entrypoint': 'step0.py', 'files': entries}
     save_yaml(path, manifest)
     save_yaml(BASE / 'update-manifest.yaml', manifest)
-    exe = BASE / 'ITC-C80 Launcher.exe'
-    if exe.exists():
-        shutil.copy2(exe, folder / exe.name)
+    executables = [path for path in [BASE / 'ITC-C80 Launcher.exe', *BASE.glob('ITC-C80 Launcher-*.exe')] if path.exists()]
+    if executables:
+        exe = max(executables, key=lambda path: path.stat().st_mtime)
+        shutil.copy2(exe, folder / 'ITC-C80 Launcher.exe')
         with zipfile.ZipFile(BASE / 'ITC-C80-Launcher-Portable.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
-            bundle.write(exe, exe.name)
+            bundle.write(exe, 'ITC-C80 Launcher.exe')
             bundle.write(BASE / 'launcher_settings.yaml', 'launcher_settings.yaml')
             bundle.write(path, 'update-manifest.yaml')
             for relative in sorted(MANAGED): bundle.write(BASE / relative, relative)

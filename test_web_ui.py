@@ -80,7 +80,7 @@ class BrowserTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.app.command({"action": "save_ng", "boxes": []})
         with patch.object(self.app, "save_evidence", return_value="evidence/B-test.jpg") as save, patch.object(web.engine, "save_result") as record:
-            self.app.command({"action": "save_ng", "boxes": [[10, 20, 100, 150]]})
+            self.app.command({"action": "save_ng", "category": "B", "boxes": [[10, 20, 100, 150]]})
             self.assertEqual(save.call_args.args[2], "B")
             self.assertEqual(save.call_args.args[1].getpixel((10, 20)), (255, 0, 0))
             self.assertEqual(record.call_args.args[1], "外観NG")
@@ -103,10 +103,34 @@ class BrowserTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.app.command({"action": "ok", "index": 7})
 
+    def test_damage_is_distinct_reason_but_keeps_b_evidence_prefix(self):
+        self.app.command({'action': 'ng', 'index': 0})
+        with patch.object(self.app, 'save_evidence', return_value='B-damage.jpg') as save, patch.object(web.engine, 'save_result') as record:
+            self.app.command({'action': 'save_ng', 'category': 'D', 'boxes': [[10, 20, 100, 150]]})
+        self.assertEqual(save.call_args.args[2], 'B')
+        self.assertEqual(record.call_args.kwargs['ng_reason'], '破損')
+        self.assertTrue(self.app.panels[0].exterior_done)
+
+    def test_manual_ng_dialog_blocks_automatic_ir_pass(self):
+        self.app.command({'action': 'ok', 'index': 0})
+        self.app.command({'action': 'ok', 'index': 0})
+        check = self.app.ir_checks[web.flow.mac(self.camera.mac)]
+        check.stage, check.count = 'COLOR', 2
+        self.app.command({'action': 'ng', 'index': 0})
+        with patch.object(web.engine, 'request_step3') as request:
+            self.app.poll_ir_cut()
+        request.assert_not_called()
+        self.assertEqual(check.stage, 'COLOR')
+
     def test_rtsp_ok_queues_step3_and_keeps_running(self):
         self.app.command({"action": "ok", "index": 0})
         with patch.object(web.engine, "request_step3") as request:
             self.app.command({"action": "ok", "index": 0})
+            request.assert_not_called()
+            check = self.app.ir_checks[web.flow.mac(self.camera.mac)]
+            self.assertEqual(check.stage, 'BW')
+            check.stage = 'PASS'
+            self.app.poll_ir_cut()
             request.assert_called_once_with(self.camera)
         state = self.app.snapshot()
         self.assertEqual(state["panels"][0]["result"], "RUNING")
