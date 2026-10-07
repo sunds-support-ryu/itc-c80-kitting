@@ -1,4 +1,4 @@
-"""Local HTML interface. Existing inspection engine owns all camera operations.
+"""Headless inspection runtime shared by the native desktop window.
 
 WidgetState maps the engine's UI writes to browser state; no hidden Tk window.
 All commands and engine callbacks execute on one owner thread.
@@ -15,8 +15,6 @@ import secrets
 import threading
 import time
 import types
-import webbrowser
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from job_store import JobStore
 import gas_post
@@ -1506,6 +1504,7 @@ class BrowserInspection(engine.InspectionUI):
                 "header": self.header_status.cget("text"), "started": self.scan_started,
                 "counter": self.counter_label.cget("text"), "network": self.network_label.cget("text"),
                 "post": {"busy": self.post_busy, "error": self.post_error, "response": self.post_response},
+                "network_busy": self.network_scanning, "usb_busy": self.usb_scanning,
                 "storage_error": self.store.save_error,
                 "job": self.store.job, "recovery_pending": self.recovery_pending, "carton_ok": self.store.carton_count(self.settings.get("carton", "0001")),
                 "settings": self.settings, "usb_devices": self.usb_devices,
@@ -1592,100 +1591,3 @@ class Runtime:
         if not success:
             raise ValueError(result)
         return result
-
-
-def make_handler(runtime, token):
-    class Handler(BaseHTTPRequestHandler):
-        def log_message(self, *args):
-            pass
-        def respond(self, status, data, mime):
-            self.send_response(status)
-            self.send_header("Content-Type", mime)
-            self.send_header("Cache-Control", "no-store")
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            try:
-                self.wfile.write(data)
-            except (BrokenPipeError, ConnectionResetError):
-                pass
-        def valid_host(self):
-            return self.headers.get("Host") == f"127.0.0.1:{self.server.server_port}"
-        def do_GET(self):
-            if not self.valid_host():
-                return self.respond(403, b"Invalid host", "text/plain")
-            path = urlsplit(self.path).path
-            try:
-                if path == "/":
-                    page = (CODE_DIR / "web" / "index.html").read_text(encoding="utf-8").replace("__TOKEN__", token)
-                    self.respond(200, page.encode(), "text/html; charset=utf-8")
-                elif path == "/api/state":
-                    self.respond(200, json.dumps(runtime.call("state"), ensure_ascii=False).encode(), "application/json; charset=utf-8")
-                elif path == "/api/gas-example":
-                    self.respond(200, (BASE / "examples" / "gas_receiver.gs").read_bytes(), "text/plain; charset=utf-8")
-                elif path.startswith("/api/image/"):
-                    key = path.rsplit("/", 1)[-1]
-                    if key not in ("0", "1", "2", "3", "4", "5", "preview"):
-                        raise ValueError("Invalid image")
-                    data = runtime.call("image", key)
-                    self.respond(200 if data else 204, data or b"", "image/jpeg")
-                else:
-                    self.respond(404, b"Not found", "text/plain")
-            except Exception:
-                self.respond(503, b"Interface unavailable", "text/plain")
-        def do_POST(self):
-            origin = self.headers.get("Origin")
-            expected = f"http://127.0.0.1:{self.server.server_port}"
-            if not self.valid_host() or self.headers.get("X-Inspection-Token") != token or origin not in (None, expected):
-                return self.respond(403, b"Forbidden", "text/plain")
-            try:
-                length = int(self.headers.get("Content-Length", "0"))
-                if urlsplit(self.path).path != "/api/command" or not 0 < length <= 65536:
-                    raise ValueError("Invalid request")
-                body = json.loads(self.rfile.read(length))
-                console_log(f"[UI command] {body.get('action', '?')}")
-                runtime.call("command", body)
-                self.respond(200, b'{"ok":true}', "application/json")
-            except Exception as error:
-                self.respond(400, json.dumps({"error": str(error)}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
-    return Handler
-
-
-def main():
-    import sys
-    for stream in (sys.stdout, sys.stderr):
-        if hasattr(stream, "reconfigure"):
-            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
-    from logging.handlers import RotatingFileHandler
-    log_dir = BASE / "data" / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s %(levelname)s [%(threadName)s] %(message)s",
-                        datefmt="%H:%M:%S", handlers=[logging.StreamHandler(),
-                            RotatingFileHandler(log_dir / "tool.log", maxBytes=5_000_000,
-                                                backupCount=5, encoding="utf-8")])
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--demo", action="store_true")
-    parser.add_argument("--no-browser", action="store_true")
-    parser.add_argument("--port", type=int, default=0)
-    args = parser.parse_args()
-    runtime = Runtime(args.demo)
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(runtime, secrets.token_hex(24)))
-    server.timeout = .5
-    url = f"http://127.0.0.1:{server.server_port}/"
-    print("Camera Inspection: " + url, flush=True)
-    if not args.no_browser:
-        webbrowser.open(url)
-    try:
-        while not runtime.root.closed:
-            server.handle_request()
-    except KeyboardInterrupt:
-        runtime.call("command", {"action": "close"})
-    finally:
-        server.server_close()
-
-
-if __name__ == "__main__":
-    from instance_lock import InstanceLock
-    with InstanceLock(BASE / 'data' / 'application.lock'):
-        main()

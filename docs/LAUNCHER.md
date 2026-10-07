@@ -1,6 +1,6 @@
 # EXE起動とGitHub更新
 
-`release/1.0/ITC-C80-Launcher-1.0.exe`を起動します。最初にGitHubの最新Releaseを確認し、`update-manifest.yaml`のファイルバージョン・サイズ・SHA256に従って必要ファイルをダウンロードします。全部の検証後に更新して`bootstrap.py`を起動します。
+`release/native/ITC-C80-Launcher-1.0.exe`を起動します。最初にGitHubの最新Releaseを確認し、`update-manifest.yaml`のファイルバージョン・サイズ・SHA256に従って必要ファイルをダウンロードします。全部の検証後に更新して`bootstrap.py`を起動します。
 
 GitHubリポジトリは `sunds-support-ryu/itc-c80-kitting` です。リポジトリはEXEに内蔵されており、新PCで設定ファイルがなくても入力不要です。別のリポジトリを使う場合だけ `launcher_settings.yaml` の `github_repository` を変更してください。更新失敗時は確認して現在版を使用できます。途中更新の復旧が未完了の場合は起動しません。
 
@@ -31,3 +31,5 @@ EXE自体はPythonなしで更新チェックできます。相機検査の実�
 `ITC-C80-Launcher-1.0.exe --self-test` は更新モジュールの確認だけで相機を起動しません。
 `--update-only` は更新チェックのみです。
 まだReleaseを公開していないため、実際のGitHub Releaseダウンロードは検証していません。模擬Releaseでダウンロード検証・不正パス拒否・破損拒否・ロールバック・中断復旧を検証しています。
+
+本地ウィンドウ版はwindowed EXEです。エラーはダイアログ、進捗は更新ウィンドウ、ログはdata/logsに表示・保存します。console版EXEを新しいEXEへ差し替えてください。

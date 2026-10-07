@@ -11,14 +11,16 @@ import requests
 import yaml
 
 MANAGED = {'src/' + name for name in ('bootstrap.py', 'appearance_inspection.py', 'inspection_engine.py',
-    'config_import.py', 'app_server.py', 'evidence_store.py', 'network_workflow.py', 'job_store.py',
+    'config_import.py', 'inspection_runtime.py', 'native_window.py', 'evidence_store.py', 'network_workflow.py', 'job_store.py',
     'gas_post.py', 'l2_device_info.py', 'instance_lock.py', 'ir_cut_check.py', 'app_paths.py')}
-MANAGED.update({'src/web/index.html', 'examples/gas_receiver.gs', 'docs/JOB_WORKFLOW.md', 'docs/WEB_UI.md', 'docs/SAVE_LAYOUT.md'})
+MANAGED.update({'examples/gas_receiver.gs', 'docs/JOB_WORKFLOW.md', 'docs/DESKTOP_UI.md', 'docs/SAVE_LAYOUT.md'})
 
 
 
 def safe_path(root, path):
-    if path not in MANAGED or '\\' in path or any(part in ('..', '.') for part in PurePosixPath(path).parts):
+    parsed = PurePosixPath(path)
+    code_or_doc = parsed.parts and parsed.parts[0] in ('src','docs','examples') and parsed.suffix in ('.py','.md','.gs','.yaml','.html','.css','.js')
+    if (path not in MANAGED and not code_or_doc) or '\\' in path or parsed.as_posix()!=path or any(part in ('..', '.') for part in parsed.parts):
         raise ValueError('更新対象外のパス: ' + str(path))
     destination = (root / path).resolve()
     if not destination.is_relative_to(root.resolve()):
@@ -106,7 +108,7 @@ class Updater:
             if not item.get('version') or item.get('asset') not in assets or not isinstance(item.get('size'), int) or not 0 <= item['size'] <= 20_000_000:
                 raise ValueError('ファイルのversion / asset / sizeが不正')
             files.append((item, destination))
-        if not {'src/bootstrap.py', 'src/app_server.py', 'src/web/index.html'}.issubset(seen):
+        if not {'src/bootstrap.py', 'src/inspection_runtime.py', 'src/native_window.py'}.issubset(seen):
             raise ValueError('必須ファイルが更新YAMLにありません')
         changes = [(item, dst) for item, dst in files if not dst.exists() or digest(dst) != item['sha256']]
         self.log('Release ' + str(manifest.get('version')) + ': ' + str(len(changes)) + ' ファイルを更新')

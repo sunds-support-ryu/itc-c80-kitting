@@ -17,7 +17,7 @@ from unittest.mock import patch
 import numpy as np
 from PIL import Image
 
-spec = importlib.util.spec_from_file_location("browser_ui_tests", (Path(__file__).resolve().parents[1] / "src" / "app_server.py"))
+spec = importlib.util.spec_from_file_location("browser_ui_tests", (Path(__file__).resolve().parents[1] / "src" / "inspection_runtime.py"))
 web = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(web)
 
@@ -429,34 +429,6 @@ class BrowserTests(unittest.TestCase):
         self.assertIsNone(self.app.panels[0].camera)
         self.assertEqual(record.call_args.kwargs['ng_reason'], 'IR-CUT不具合')
 
-    def test_http_command_requires_local_host_and_token(self):
-        runtime = types.SimpleNamespace(call=lambda kind, arg=None: {"panels": []} if kind == "state" else None)
-        server = web.ThreadingHTTPServer(("127.0.0.1", 0), web.make_handler(runtime, "test-token"))
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        client = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=3)
-        try:
-            client.request("GET", "/api/state")
-            response = client.getresponse()
-            self.assertEqual(response.status, 200)
-            response.read()
-            client.request("POST", "/api/command", '{"action":"mode","count":1}', {"Content-Type": "application/json"})
-            response = client.getresponse()
-            self.assertEqual(response.status, 403)
-            response.read()
-            client.request("POST", "/api/command", '{"action":"mode","count":1}',
-                           {"Content-Type": "application/json", "X-Inspection-Token": "test-token"})
-            response = client.getresponse()
-            self.assertEqual(response.status, 200)
-            response.read()
-            client.request("GET", "/api/state", headers={"Host": "foreign.example"})
-            response = client.getresponse()
-            self.assertEqual(response.status, 403)
-            response.read()
-        finally:
-            client.close()
-            server.shutdown()
-            server.server_close()
 
 
 if __name__ == "__main__":

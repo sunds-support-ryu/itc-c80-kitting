@@ -18,7 +18,7 @@ config file/  Camera config (private)
 
 ## Start
 
-Use `start.bat` or `release/1.0/ITC-C80-Launcher-1.0.exe`. The launcher finds the project root and starts `src/bootstrap.py` after checking updates. Camera operations need Python 3.9+ and Npcap. Configure credentials and network settings in the application; put the camera config in `config file/`. Existing production folders remain at the project root.
+Use `start.vbs` or the windowed `release/native/ITC-C80-Launcher-1.0.exe`. No console or browser is opened. The launcher finds the project root and starts `src/bootstrap.py` after checking updates. Camera operations need Python 3.9+ and Npcap. Configure credentials and network settings in the application; put the camera config in `config file/`. Existing production folders remain at the project root.
 
 Copy `examples/launcher_settings.yaml` to `launcher_settings.yaml` if needed.
 
@@ -41,6 +41,6 @@ python tools/build_release.py --version 1.0
 Release assets are generated in `release/assets/`; initial distribution is `release/ITC-C80-Portable.zip`. Never publish local credentials, production records, images or camera config.
 
 - [Inspection workflow](docs/JOB_WORKFLOW.md)
-- [HTML interface](docs/WEB_UI.md)
+- [Native desktop interface](docs/DESKTOP_UI.md)
 - [Evidence layout](docs/SAVE_LAYOUT.md)
 - [Launcher](docs/LAUNCHER.md)

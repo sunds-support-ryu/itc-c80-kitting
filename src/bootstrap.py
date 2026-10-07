@@ -8,7 +8,7 @@ import sys
 # 設定
 # ============================================================
 
-TARGET_SCRIPT = "app_server.py"
+TARGET_SCRIPT = "native_window.py"
 
 # import名 : pipパッケージ名
 REQUIRED_MODULES = {
@@ -39,7 +39,7 @@ def install_package(package_name):
             "pip",
             "install",
             package_name
-        ]
+        ], creationflags=subprocess.CREATE_NO_WINDOW if os.name=="nt" else 0
     )
 
     return result.returncode == 0
@@ -178,7 +178,7 @@ def start_step2():
         )
 
         print(
-            "bootstrap.py と app_server.py を"
+            "bootstrap.py と native_window.py を"
         )
 
         print(
@@ -200,7 +200,7 @@ def start_step2():
                 sys.executable,
                 TARGET_SCRIPT
             ],
-            cwd=base_dir
+            cwd=base_dir, creationflags=subprocess.CREATE_NO_WINDOW if os.name=="nt" else 0, check=True
         )
 
         return True
@@ -242,11 +242,7 @@ def main():
 
     if not check_tkinter():
 
-        input(
-            "\nEnterキーで終了..."
-        )
-
-        return
+        return False
 
     # --------------------------------------------------------
     # Python Modules
@@ -267,11 +263,7 @@ def main():
                 f"- {package}"
             )
 
-        input(
-            "\nEnterキーで終了..."
-        )
-
-        return
+        return False
 
     # --------------------------------------------------------
     # Start
@@ -280,15 +272,10 @@ def main():
     print()
     print("[OK] 必要なモジュール確認完了")
 
-    start_step2()
-
-    print()
-    input(
-        "Enterキーで終了..."
-    )
+    return start_step2()
 
 
 # ============================================================
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(0 if main() else 1)

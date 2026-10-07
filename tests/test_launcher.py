@@ -23,7 +23,7 @@ class LauncherTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.names = ['src/bootstrap.py', 'src/app_server.py', 'src/web/index.html']
+        self.names = ['src/bootstrap.py', 'src/inspection_runtime.py', 'src/native_window.py']
         self.entries, self.assets, self.responses = [], [], {}
         for name in self.names:
             dst = self.root / name
@@ -57,7 +57,7 @@ class LauncherTests(unittest.TestCase):
         self.assertFalse((self.root / 'data/updates/transaction.yaml').exists())
 
     def test_hash_failure_never_replaces_any_code(self):
-        self.responses['https://example.com/src__app_server.py'] = b'corrupt'
+        self.responses['https://example.com/src__inspection_runtime.py'] = b'corrupt'
         with self.assertRaises(ValueError): self.updater.update()
         for name in self.names: self.assertEqual((self.root / name).read_bytes(), b'old')
 
@@ -68,7 +68,7 @@ class LauncherTests(unittest.TestCase):
     def test_replace_error_rolls_back_already_replaced_code(self):
         original = core.os.replace
         def replace(source, destination):
-            if Path(destination) == self.root / 'src/app_server.py': raise PermissionError('locked')
+            if Path(destination) == self.root / 'src/inspection_runtime.py': raise PermissionError('locked')
             return original(source, destination)
         with patch.object(core.os, 'replace', side_effect=replace), self.assertRaises(PermissionError):
             self.updater.update()
