@@ -2,7 +2,7 @@
 
 `release/1.0/ITC-C80-Launcher-1.0.exe`を起動します。最初にGitHubの最新Releaseを確認し、`update-manifest.yaml`のファイルバージョン・サイズ・SHA256に従って必要ファイルをダウンロードします。全部の検証後に更新して`bootstrap.py`を起動します。
 
-GitHubリポジトリは `sunds-support-ryu/itc-c80-kitting` です。初回起動で `owner/repo` を入力するか、`launcher_settings.yaml` の `github_repository` を設定してください。空欄でEnterを押すと、このPCの現在版を起動します。更新失敗時は確認して現在版を使用できます。途中更新の復旧が未完了の場合は起動しません。
+GitHubリポジトリは `sunds-support-ryu/itc-c80-kitting` です。リポジトリはEXEに内蔵されており、新PCで設定ファイルがなくても入力不要です。別のリポジトリを使う場合だけ `launcher_settings.yaml` の `github_repository` を変更してください。更新失敗時は確認して現在版を使用できます。途中更新の復旧が未完了の場合は起動しません。
 
 ## GitHub Releaseの作成
 

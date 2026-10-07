@@ -10,9 +10,15 @@ import unittest
 from unittest.mock import patch
 import yaml
 import launcher_core as core
+from launcher import configured_repository
 
 
 class LauncherTests(unittest.TestCase):
+    def test_new_pc_uses_builtin_repository_without_config(self):
+        for config in ({}, {'github_repository': ''}, {'github_repository': '  '}):
+            self.assertEqual(configured_repository(config), 'sunds-support-ryu/itc-c80-kitting')
+        self.assertEqual(configured_repository({'github_repository': 'other/repo'}), 'other/repo')
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

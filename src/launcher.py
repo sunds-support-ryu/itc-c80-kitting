@@ -9,6 +9,12 @@ import yaml
 from launcher_core import Updater, save_yaml
 from instance_lock import InstanceLock
 
+DEFAULT_REPOSITORY = 'sunds-support-ryu/itc-c80-kitting'
+
+
+def configured_repository(config):
+    return str(config.get('github_repository') or '').strip() or DEFAULT_REPOSITORY
+
 
 def python_command(root, configured):
     if configured:
@@ -38,7 +44,7 @@ def main():
     args = parser.parse_args()
     if args.self_test:
         from launcher_core import MANAGED
-        print('ITC-C80 Launcher 1.0 / YAML / GitHub updater OK / managed files=' + str(len(MANAGED)))
+        print('ITC-C80 Launcher 1.0 / repository=' + DEFAULT_REPOSITORY + ' / managed files=' + str(len(MANAGED)))
         return 0
     location = Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve().parent
     root = next((folder for folder in (location, *location.parents) if (folder / 'src/bootstrap.py').is_file()), location)
@@ -48,12 +54,7 @@ def main():
     config = config or {}
     with InstanceLock(root / 'data' / 'launcher.lock'):
         with InstanceLock(root / 'data' / 'application.lock'):
-            repository = str(config.get('github_repository') or '').strip()
-            if not repository:
-                repository = input('GitHub owner/repo（未設定の場合はEnterで現在版を起動）: ').strip()
-                if repository:
-                    config['github_repository'] = repository
-                    save_yaml(config_path, config)
+            repository = configured_repository(config)
             if repository:
                 updater = Updater(root, repository)
                 try:

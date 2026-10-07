@@ -13,8 +13,10 @@ from launcher_core import MANAGED, save_yaml
 BASE = Path(__file__).resolve().parents[1]
 
 
-def build(version):
+def build(version, launcher=None):
     folder = BASE / 'release' / 'assets'
+    if launcher:
+        folder = folder / version
     folder.mkdir(exist_ok=True)
     path = folder / 'update-manifest.yaml'
     previous = yaml.safe_load(path.read_text(encoding='utf-8')) if path.exists() else {}
@@ -31,13 +33,13 @@ def build(version):
                         'asset': asset, 'size': source.stat().st_size, 'sha256': sha})
     manifest = {'schema': 1, 'version': version, 'entrypoint': 'src/bootstrap.py', 'files': entries}
     save_yaml(path, manifest)
-    exe = BASE / 'release' / '1.0' / 'ITC-C80-Launcher-1.0.exe'
+    exe = Path(launcher).resolve() if launcher else BASE / 'release' / '1.0' / 'ITC-C80-Launcher-1.0.exe'
     if exe.exists():
-        destination = folder / exe.name
+        destination = folder / 'ITC-C80-Launcher-1.0.exe'
         if not destination.exists() or hashlib.sha256(destination.read_bytes()).digest() != hashlib.sha256(exe.read_bytes()).digest():
             shutil.copy2(exe, destination)
         with zipfile.ZipFile(BASE / 'release' / 'ITC-C80-Portable.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
-            bundle.write(exe, exe.name)
+            bundle.write(exe, 'ITC-C80-Launcher-1.0.exe')
             bundle.write(BASE / 'examples/launcher_settings.yaml', 'launcher_settings.yaml')
             bundle.write(path, 'update-manifest.yaml')
             for relative in sorted(MANAGED): bundle.write(BASE / relative, relative)
@@ -47,4 +49,6 @@ def build(version):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', default='1.0')
-    build(parser.parse_args().version)
+    parser.add_argument('--launcher', help='Path to the freshly built launcher EXE')
+    args = parser.parse_args()
+    build(args.version, args.launcher)
