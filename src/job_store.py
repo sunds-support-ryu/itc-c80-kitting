@@ -16,7 +16,7 @@ TERMINAL = {"OK", "NG", "ERROR"}
 def key(value):
     value = re.sub(r"[:-]", "", value).upper()
     if not re.fullmatch(r"[0-9A-F]{12}", value):
-        raise ValueError("MACが不正です")
+        raise ValueError('Invalid MAC address')
     return value
 
 
@@ -64,7 +64,7 @@ class JobStore:
         except PermissionError as error:
             self.dirty = True
             self.save_error = str(error)
-            logging.getLogger("camera_inspection").error("作業状態の保存待ち: %s", error)
+            logging.getLogger("camera_inspection").error('Job save pending: %s', error)
 
     def flush_pending(self):
         with self.lock:
@@ -88,7 +88,7 @@ class JobStore:
 
     def create(self, carton, mode, base_ip, maximum=12):
         if not re.fullmatch(r"[0-9A-Za-z_-]{1,32}", carton):
-            raise ValueError("Carton番号を入力してください（英数字・ハイフン）")
+            raise ValueError('Enter a carton number (letters, numbers and hyphens)')
         with self.lock:
             if self.job:
                 self.archive("incomplete" if self.unfinished() else "completed")
@@ -138,7 +138,7 @@ class JobStore:
                 self.pending_results.pop(key(mac), None)
             except PermissionError as error:
                 self.save_error = str(error)
-                logging.getLogger("camera_inspection").error("履歴の保存待ち: %s", error)
+                logging.getLogger("camera_inspection").error('History save pending: %s', error)
 
     def _finish(self, mac, result, detail=""):
         with self.lock:

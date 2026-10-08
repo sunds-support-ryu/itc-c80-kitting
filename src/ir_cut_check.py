@@ -37,7 +37,7 @@ class Check:
         self.last_check = now
         state, diff, saturation = analyze_frame(frame)
         self.count = self.count + 1 if state == self.stage else 0
-        self.metrics = f'{state} · RGB差 {diff:.1f} · 彩度 {saturation:.1f} · {self.count}/3'
+        self.metrics = f'{state} - RGB difference {diff:.1f} - saturation {saturation:.1f} · {self.count}/3'
         if self.count >= 3:
             if self.stage == 'BW':
                 self.stage, self.count, self.started, self.last_check = 'COLOR', 0, now, None

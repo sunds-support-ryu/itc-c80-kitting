@@ -1,9 +1,9 @@
-"""検査証拠の分類・命名・保存。画像は上書きしない。"""
+'Classify, name and save evidence without overwriting images.'
 import os
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
-CATEGORIES = {"B": "外観", "E1": "RTSP接続不可", "E2": "IR-CUT不具合", "Z": "そのた"}
+CATEGORIES = {"B": 'Appearance', "E1": 'RTSP unavailable', "E2": 'IR-CUT defect', "Z": 'Other'}
 
 
 def safe_component(value):
@@ -13,7 +13,7 @@ def safe_component(value):
 
 
 def organize_records(base_dir):
-    """旧CSVを新しい保存先へ移す。同名の新CSVがあれば旧CSVを別名で保持する。"""
+    'Migrate the legacy CSV and retain any conflicting file under a different name.'
     folder = os.path.join(base_dir, "records")
     os.makedirs(folder, exist_ok=True)
     for filename in ("camera_inspection.csv", "step1_evidence.csv"):
@@ -60,7 +60,7 @@ def save_image(directory, category, camera, image, extension="png"):
 
 
 def connection_failure_image(camera, status):
-    """RTSP映像ではなく接続失敗の記録であることを明示する。"""
+    'Clearly mark connection-failure evidence as a diagram, not a camera image.'
     image = Image.new("RGB", (1280, 720), "#17212B")
     draw = ImageDraw.Draw(image)
     font_path = "meiryo.ttc"
@@ -69,10 +69,10 @@ def connection_failure_image(camera, status):
         font = ImageFont.truetype(font_path, 26)
     except OSError:
         title_font = font = ImageFont.load_default()
-    draw.text((48, 40), "E1 · RTSP接続不可（映像なし）", fill="#FF7777", font=title_font)
-    lines = ["接続失敗の記録 / カメラの撮影画像ではありません", f"SN: {camera.sn}",
+    draw.text((48, 40), 'E1 - RTSP unavailable (no image)', fill="#FF7777", font=title_font)
+    lines = ['Connection-failure record / not a captured camera image', f"SN: {camera.sn}",
              f"MAC: {camera.mac}", f"IP: {camera.ip}",
-             f"日時: {datetime.now():%Y-%m-%d %H:%M:%S}", f"状態: {status}"]
+             f'Timestamp: {datetime.now():%Y-%m-%d %H:%M:%S}', f'Status: {status}']
     for i, line in enumerate(lines):
         draw.text((48, 130 + i * 64), line[:80], fill="white", font=font)
     return image

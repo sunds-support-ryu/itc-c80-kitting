@@ -16,7 +16,7 @@ class InstanceLock:
             msvcrt.locking(self.stream.fileno(), msvcrt.LK_NBLCK, 1)
         except Exception:
             self.stream.close()
-            raise RuntimeError('ツールが実行中です。終了してから起動してください')
+            raise RuntimeError('Application already running. Close it before starting another instance.')
 
     def close(self):
         self.stream.close()

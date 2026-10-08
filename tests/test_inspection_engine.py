@@ -74,6 +74,18 @@ class USBReader:
         self.stopped = True
 
 class InspectionTests(unittest.TestCase):
+    def test_legacy_japanese_csv_rows_are_not_translated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'legacy.csv'
+            previous=['2026-01-01','OLD-SN','02:00:00:00:00:01','192.168.0.150','外観NG','-']
+            with path.open('w',encoding='utf-8-sig',newline='') as file:
+                writer=csv.writer(file);writer.writerow(['日時','SN','MAC','IP','結果','Reset']);writer.writerow(previous)
+            with patch.object(self.m,'CSV_FILE',str(path)):
+                self.m.save_result(self.m.CameraInfo('192.168.0.151','NEW-SN','02:00:00:00:00:02'),'OK','-')
+            with path.open(encoding='utf-8-sig',newline='') as file:rows=list(csv.reader(file))
+            self.assertEqual(rows[1],previous+['',''])
+            self.assertEqual(rows[0][0],'Timestamp')
+
     def setUp(self):
         spec = importlib.util.spec_from_file_location("inspection_test_module", (Path(__file__).resolve().parents[1] / "src" / "inspection_engine.py"))
         self.m = importlib.util.module_from_spec(spec)
@@ -220,12 +232,12 @@ class InspectionTests(unittest.TestCase):
         self.assertIn("[Enter]", panel.ok.options["text"])
 
     def test_black_panel_shows_waiting_reconnect_and_step3_progress(self):
-        self.assertEqual(self.app.panels[0].video.options["text"], "カメラ待ち")
+        self.assertEqual(self.app.panels[0].video.options["text"], 'Waiting for camera')
         cameras = self.fill_four()
         panel = self.app.panels[0]
-        self.m.event_queue.put(("stream_status", cameras[0].sn, "RTSP NG / 再接続中..."))
+        self.m.event_queue.put(("stream_status", cameras[0].sn, 'RTSP NG / reconnecting...'))
         self.app.poll()
-        self.assertIn("再接続中", panel.video.options["text"])
+        self.assertIn("reconnecting", panel.video.options["text"])
         with patch.object(self.m, "request_step3"):
             self.app.mark_ok(0)
         self.m.event_queue.put(("step3_progress", cameras[0].sn, "IP Reset option=2"))
@@ -312,12 +324,12 @@ class InspectionTests(unittest.TestCase):
 
     def test_short_status_separates_stream_error_from_ng(self):
         cameras = self.fill_four()
-        self.m.event_queue.put(("stream_status", cameras[0].sn, "映像 NG / 再接続中..."))
+        self.m.event_queue.put(("stream_status", cameras[0].sn, 'Video NG / reconnecting...'))
         self.app.poll()
-        self.assertEqual(self.app.panels[0].status.options["text"], "映像が途切れました · 再接続中")
+        self.assertEqual(self.app.panels[0].status.options["text"], 'Video interrupted - reconnecting')
         self.assertEqual(self.app.ng_count, 0)
-        self.app.log("[再起動待ち] 192.168.0.233")
-        self.assertIn("再起動待ち", self.app.panels[3].log_box.text)
+        self.app.log("[Waiting for reboot] 192.168.0.233")
+        self.assertIn('Waiting for reboot', self.app.panels[3].log_box.text)
         self.assertNotIn("option=", self.app.panels[3].log_box.text)
         self.assertFalse(hasattr(type(self.app), "ok_button"))
         self.assertNotIn("log_box", self.app.__dict__)
@@ -342,8 +354,8 @@ class InspectionTests(unittest.TestCase):
                 self.app.mark_ok(0)
                 reset.assert_not_called()
             self.app.log("[Offline] 192.168.0.230")
-            self.assertIn("再起動中", self.app.panels[0].log_box.text)
-            self.assertNotIn("再起動中", self.app.panels[1].log_box.text)
+            self.assertIn('Rebooting', self.app.panels[0].log_box.text)
+            self.assertNotIn('Rebooting', self.app.panels[1].log_box.text)
             self.m.event_queue.put(("camera_ready", cameras[0]))
             self.app.poll()
             self.assertIsNone(self.app.panels[0].reader)  # RTSP準備完了だけでは外観検査を飛ばせない。
@@ -403,14 +415,14 @@ class InspectionTests(unittest.TestCase):
             with patch.object(self.m.messagebox, "askyesno", return_value=True), patch.object(self.app, "save_evidence", return_value="E1-test.png") as save:
                 self.app.mark_ng(0)
                 result.assert_called_once_with(self.app.panels[0].last_camera, "NG", "-",
-                                               ng_reason="RTSP接続不可", evidence_path="E1-test.png")
+                                               ng_reason='RTSP unavailable', evidence_path="E1-test.png")
                 self.assertEqual(save.call_args.args[2], "E1")
 
     def test_ng_reasons_are_saved_without_reset(self):
         cameras = self.fill_four()
         with patch.object(self.m, "save_result") as result, patch.object(self.m, "request_step3") as reset, \
                 patch.object(self.app, "save_evidence", return_value="evidence.png"):
-            for index, reason in enumerate(("IR-CUT不具合", "映像にノイズ")):
+            for index, reason in enumerate(('IR-CUT defect', "映像にノイズ")):
                 self.app.preview_ng = lambda camera, image, reason=reason: ("save", reason)
                 self.app.mark_ng(index)
                 result.assert_called_with(cameras[index], "NG", "-", ng_reason=reason, evidence_path="evidence.png")
@@ -451,7 +463,7 @@ class InspectionTests(unittest.TestCase):
             result.assert_not_called()
             preview.return_value = "B-AA-BB-CC-DD-EE-FF.jpg"
             self.app.mark_ng(0)
-            result.assert_called_once_with(camera, "外観NG", "-", ng_reason="外観不具合", evidence_path="B-AA-BB-CC-DD-EE-FF.jpg")
+            result.assert_called_once_with(camera, 'Appearance NG', "-", ng_reason='Appearance defect', evidence_path="B-AA-BB-CC-DD-EE-FF.jpg")
             self.assertIs(self.app.panels[0].camera, camera)
             self.assertTrue(self.app.panels[0].exterior_done)
             self.assertIs(self.app.panels[0].reader.camera, camera)
@@ -495,7 +507,7 @@ class InspectionTests(unittest.TestCase):
             canvas = next(w for w in widgets if "<B1-Motion>" in w.bindings)
             canvas.bindings["<Button-1>"](types.SimpleNamespace(x=50, y=25))
             canvas.bindings["<ButtonRelease-1>"](types.SimpleNamespace(x=200, y=125))
-            next(w for w in widgets if w.options.get("text") == "確定・保存").options["command"]()
+            next(w for w in widgets if w.options.get("text") == 'Confirm and save').options["command"]()
         fake_tk = types.SimpleNamespace(**{name: EditorWidget for name in ("Toplevel", "Label", "Canvas", "Frame", "Button")})
         with patch.object(editor, "tk", fake_tk), \
                 patch.object(editor, "save_exterior_evidence", return_value="evidence.jpg") as save, \
@@ -526,14 +538,14 @@ class InspectionTests(unittest.TestCase):
                 self.assertRegex(path.name, rf"^{category}-SN001_AA-BB-CC-DD-EE-FF_\d{{8}}_\d{{6}}_\d{{6}}\.png$")
             csv_file = Path(directory) / "records" / "inspection.csv"
             with patch.object(self.m, "CSV_FILE", str(csv_file)):
-                self.m.save_result(camera, "NG", "-", ng_reason="そのた", evidence_path=str(path))
+                self.m.save_result(camera, "NG", "-", ng_reason='Other', evidence_path=str(path))
             with csv_file.open(newline="", encoding="utf-8-sig") as source:
                 rows = list(csv.reader(source))
             self.assertEqual((csv_file.parent / rows[1][-1]).resolve(), path.resolve())
 
     def test_manual_other_keeps_z_category_even_with_ir_cut_text(self):
         cameras = self.fill_four()
-        self.app.preview_ng = lambda camera, image: ("save", "IR-CUT不具合", "Z")
+        self.app.preview_ng = lambda camera, image: ("save", 'IR-CUT defect', "Z")
         with patch.object(self.app, "save_evidence", return_value="Z-image.png") as save, patch.object(self.m, "save_result"):
             self.app.mark_ng(0)
             self.assertIs(save.call_args.args[0], cameras[0])
@@ -569,20 +581,20 @@ class InspectionTests(unittest.TestCase):
         self.app.usb_selected = 2
         self.app.usb_devices = {2: "USB 2.0 Camera"}
         self.app.update_usb_status(self.app.usb_reader.get_frame())
-        self.assertIn("映像正常", self.app.usb_state_label.options["text"])
+        self.assertIn("video available", self.app.usb_state_label.options["text"])
         self.assertIn("USB 2.0 Camera", self.app.usb_device_label.options["text"])
         self.assertIn("640 × 480", self.app.usb_detail_label.options["text"])
-        self.assertIn("待機", self.app.usb_detail_label.options["text"])
+        self.assertIn('idle', self.app.usb_detail_label.options["text"])
         self.app.usb_reader.available = False
-        self.app.usb_reader.error = "選択したUSB Cameraなし · 再接続待ち"
+        self.app.usb_reader.error = 'Selected USB camera unavailable - waiting for reconnection'
         self.app.update_usb_status(None)
-        self.assertIn("映像なし", self.app.usb_state_label.options["text"])
+        self.assertIn("No frames", self.app.usb_state_label.options["text"])
         self.app.hide_usb_status()
         self.assertIsNone(self.app.usb_status_window)
         self.assertFalse(self.app.usb_reader.stopped)
         self.app.show_usb_status()
         self.assertIsNotNone(self.app.usb_status_window)
-        self.assertIn("映像なし", self.app.usb_state_label.options["text"])
+        self.assertIn("No frames", self.app.usb_state_label.options["text"])
 
     def test_exterior_ng_continues_preparation_and_assigns_usb_to_next_device(self):
         async def check():
@@ -663,7 +675,7 @@ class InspectionTests(unittest.TestCase):
         self.assertIs(panel.processing_camera, cameras[0])
         self.m.event_queue.put(("step3_result", cameras[0], True, "complete"))
         self.app.poll()
-        self.assertEqual(panel.video.options["text"], "再起動完了\nOK")
+        self.assertEqual(panel.video.options["text"], 'Reboot completed\nOK')
         self.assertIsNone(panel.camera)  # 少なくとも2秒は完了表示を保持。
         panel.blink_ok()
         self.assertEqual(panel.video.options["fg"], self.m.COLOR_VIDEO)
@@ -680,16 +692,16 @@ class InspectionTests(unittest.TestCase):
             path = Path(directory) / "results.csv"
             with path.open("w", newline="", encoding="utf-8-sig") as target:
                 csv.writer(target).writerows([
-                    ["日時", "SN", "MAC", "IP", "結果", "初期化"],
+                    ['Timestamp', "SN", "MAC", "IP", 'Result', 'Reset'],
                     ["old", "SN1", "MAC1", "192.168.0.231", "OK", "OK"]])
             with patch.object(self.m, "CSV_FILE", str(path)):
-                self.m.save_result(camera, "NG", "-", ng_reason="IR-CUT不具合")
+                self.m.save_result(camera, "NG", "-", ng_reason='IR-CUT defect')
                 self.m.save_result(camera, "NG", "-", ng_reason="ノイズ, 色異常")
             with path.open(newline="", encoding="utf-8-sig") as source:
                 rows = list(csv.reader(source))
-            self.assertEqual(rows[0][-2:], ["NG理由", "証拠"])
+            self.assertEqual(rows[0][-2:], ['NG reason', 'Evidence'])
             self.assertEqual(rows[1], ["old", "SN1", "MAC1", "192.168.0.231", "OK", "OK", "", ""])
-            self.assertEqual(rows[2][-2], "IR-CUT不具合")
+            self.assertEqual(rows[2][-2], 'IR-CUT defect')
             self.assertEqual(rows[3][-2], "ノイズ, 色異常")
 
     def test_debug_toggle_redacts_password_and_close_stops_all(self):

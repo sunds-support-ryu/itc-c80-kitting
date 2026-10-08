@@ -14,7 +14,7 @@ class PostError(ValueError):
 def validate_url(url):
     parsed = urlsplit(url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
-        raise ValueError("HTTP / HTTPS のPOST URLを入力してください")
+        raise ValueError('Enter an HTTP or HTTPS POST URL')
     return url
 
 
@@ -27,18 +27,18 @@ def send(url, payload, session_factory=requests.Session):
             for chunk in response.iter_content(4096):
                 length += len(chunk)
                 if length > 65536:
-                    raise PostError("GAS応答が大きすぎます（64KB超）")
+                    raise PostError('GAS response exceeds 64KB')
                 chunks.append(chunk)
             raw = b"".join(chunks).decode("utf-8-sig", errors="replace")
             import json
             try:
                 body = json.loads(raw)
             except ValueError:
-                raise PostError("GAS応答がJSONではありません（ログイン画面・デプロイ設定を確認）",
+                raise PostError('GAS response is not JSON (check login and deployment settings)',
                                 {"http_status": response.status_code, "body": raw[:2000]})
             received = {"http_status": response.status_code, "body": body}
             if not isinstance(body, dict) or body.get("ok") is not True:
-                raise PostError("GAS側が受信成功を確認していません", received)
+                raise PostError('GAS did not acknowledge successful receipt', received)
             if body.get("record_id") != payload["record_id"]:
-                raise PostError("GAS応答のrecord_idが一致しません", received)
+                raise PostError('GAS response record_id does not match', received)
             return received

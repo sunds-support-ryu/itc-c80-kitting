@@ -13,12 +13,12 @@ for output in (sys.stdout, sys.stderr):
 
 
 # ============================================================
-# 設定
+# Settings.
 # ============================================================
 
 TARGET_SCRIPT = "native_window.py"
 
-# import名 : pipパッケージ名
+# Import name to pip package mapping.
 REQUIRED_MODULES = {
     "aiohttp": "aiohttp",
     "cv2": "opencv-python",
@@ -34,9 +34,7 @@ REQUIRED_MODULES = {
 # ============================================================
 
 def install_package(package_name):
-    """
-    現在使用中のPython環境へパッケージをインストール。
-    """
+    'Install packages into the active Python environment.'
 
     print(f"[Install] {package_name}")
 
@@ -60,7 +58,7 @@ def install_package(package_name):
 def check_modules():
 
     print("========================================")
-    print(" モジュール確認")
+    print(' Module checks')
     print("========================================")
 
     failed = []
@@ -92,11 +90,11 @@ def check_modules():
         except ImportError:
 
             print(
-                f"[NG] {import_name} がありません"
+                f'[NG] {import_name} unavailable'
             )
 
             print(
-                f"     → {package_name} をインストール"
+                f'     → {package_name} install'
             )
 
             success = install_package(
@@ -111,7 +109,7 @@ def check_modules():
 
                 continue
 
-            # インストール後に再確認
+            # Recheck after installation.
             try:
 
                 importlib.invalidate_caches()
@@ -121,8 +119,7 @@ def check_modules():
                 )
 
                 print(
-                    f"[OK] {import_name} "
-                    "インストール完了"
+                    f'[OK] {import_name} installation complete'
                 )
 
             except ImportError:
@@ -139,10 +136,7 @@ def check_modules():
 # ============================================================
 
 def check_tkinter():
-    """
-    tkinterは通常Python標準。
-    pipではなくPython本体に含まれます。
-    """
+    'Tkinter is part of the Python installation, not a pip package.'
 
     try:
 
@@ -154,9 +148,9 @@ def check_tkinter():
 
     except ImportError:
 
-        print("[NG] tkinter がありません")
+        print('[NG] tkinter is unavailable')
         print(
-            "Pythonを再インストールしてください。"
+            'Reinstall Python.'
         )
 
         return False
@@ -181,23 +175,22 @@ def start_step2():
 
         print()
         print(
-            f"[NG] {TARGET_SCRIPT} "
-            "が見つかりません"
+            f'[NG] {TARGET_SCRIPT} not found'
         )
 
         print(
-            "bootstrap.py と native_window.py を"
+            'Place bootstrap.py and native_window.py'
         )
 
         print(
-            "同じフォルダに置いてください。"
+            'in the same folder.'
         )
 
         return False
 
     print()
     print("========================================")
-    print(f" {TARGET_SCRIPT} 起動")
+    print(f' {TARGET_SCRIPT} starting')
     print("========================================")
     print()
 
@@ -216,7 +209,7 @@ def start_step2():
     except Exception as e:
 
         print(
-            f"[起動 Error] {e}"
+            f'[Startup Error] {e}'
         )
 
         return False
@@ -262,7 +255,7 @@ def main():
 
         print()
         print("========================================")
-        print(" インストール失敗")
+        print(' Installation failed')
         print("========================================")
 
         for package in failed:
@@ -278,7 +271,7 @@ def main():
     # --------------------------------------------------------
 
     print()
-    print("[OK] 必要なモジュール確認完了")
+    print('[OK] Required modules verified')
 
     return start_step2()
 

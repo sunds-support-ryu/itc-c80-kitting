@@ -39,6 +39,15 @@ class Reader:
 
 
 class BrowserTests(unittest.TestCase):
+    def test_ui_language_is_persisted_without_translating_backend_state(self):
+        records=[{'id':'wired','name':'Ethernet','ip':'192.168.0.10','mac':'02:00:00:00:00:10'}]
+        self.app.settings['network_interfaces']=records
+        web.engine.step3.save_settings(self.storage.name, {'network_interfaces':records})
+        self.app.command({'action':'settings','network':'wired','start':220,'end':240,'mode':1,'stream':'/sub','ui_language':'en'})
+        self.assertEqual(web.engine.step3.load_settings(self.storage.name)['ui_language'],'en')
+        with self.assertRaises(ValueError):
+            self.app.command({'action':'settings','network':'wired','ui_language':'unsupported'})
+
     def setUp(self):
         self.storage = tempfile.TemporaryDirectory()
         self.addCleanup(self.storage.cleanup)
@@ -89,7 +98,7 @@ class BrowserTests(unittest.TestCase):
             self.app.command({"action": "save_ng", "category": "B", "boxes": [[10, 20, 100, 150]]})
             self.assertEqual(save.call_args.args[2], "B")
             self.assertEqual(save.call_args.args[1].getpixel((10, 20)), (255, 0, 0))
-            self.assertEqual(record.call_args.args[1], "外観NG")
+            self.assertEqual(record.call_args.args[1], 'Appearance NG')
         self.assertTrue(self.app.panels[0].exterior_done)
         self.assertIsNone(self.app.preview)
 
@@ -101,14 +110,14 @@ class BrowserTests(unittest.TestCase):
         self.assertIsNone(self.app.panels[0].camera)
         self.assertEqual(self.app.ng_count, 1)
         self.assertIsNone(self.app.preview)
-        self.assertEqual(record.call_args.kwargs['ng_reason'], 'RTSP不具合')
+        self.assertEqual(record.call_args.kwargs['ng_reason'], 'RTSP defect')
 
     def test_damage_is_distinct_reason_but_keeps_b_evidence_prefix(self):
         self.app.command({'action': 'ng', 'index': 0})
         with patch.object(self.app, 'save_evidence', return_value='B-damage.jpg') as save, patch.object(web.engine, 'save_result') as record:
             self.app.command({'action': 'save_ng', 'category': 'D', 'boxes': [[10, 20, 100, 150]]})
         self.assertEqual(save.call_args.args[2], 'B')
-        self.assertEqual(record.call_args.kwargs['ng_reason'], '破損')
+        self.assertEqual(record.call_args.kwargs['ng_reason'], 'Damage')
         self.assertTrue(self.app.panels[0].exterior_done)
 
     def test_manual_ng_dialog_blocks_automatic_ir_pass(self):
@@ -327,7 +336,7 @@ class BrowserTests(unittest.TestCase):
         self.app.panels[0].show_result("RUNING", self.camera)
         self.app.allocate_label(self.camera, "192.168.0.220")
         self.assertEqual(self.app.jobs[web.flow.mac(self.camera.mac)]["state"], "sticker")
-        self.assertIn("ラベル", self.app.snapshot()["panels"][0]["message"])
+        self.assertIn("label", self.app.snapshot()["panels"][0]["message"])
         with patch.object(self.app, "finalize") as change:
             change.assert_not_called()
             self.app.command({"action": "ok", "index": 0})
@@ -343,7 +352,7 @@ class BrowserTests(unittest.TestCase):
             self.app.poll()
         self.assertEqual(panel.result_state, "OK")
         self.assertIs(panel.processing_camera, self.camera)
-        self.assertIn("電源", panel.video.cget("text"))
+        self.assertIn("power", panel.video.cget("text"))
         self.app.workflow_events.put(("disconnected", self.camera))
         self.app.poll()
         self.assertIsNone(panel.processing_camera)
@@ -427,7 +436,7 @@ class BrowserTests(unittest.TestCase):
         start.assert_not_called()
         self.assertIsNone(self.app.preview)
         self.assertIsNone(self.app.panels[0].camera)
-        self.assertEqual(record.call_args.kwargs['ng_reason'], 'IR-CUT / 光センサー不具合')
+        self.assertEqual(record.call_args.kwargs['ng_reason'], 'IR-CUT / light sensor defect')
 
 
 

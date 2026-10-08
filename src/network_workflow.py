@@ -21,7 +21,7 @@ ANNOUNCE, SET, ACK = b"\x00\x01", b"\x00\x02", b"\x00\x03"
 def mac(value):
     value = re.sub(r"[:-]", "", str(value)).lower()
     if not re.fullmatch(r"[0-9a-f]{12}", value):
-        raise ValueError("MACが不正です")
+        raise ValueError('Invalid MAC address')
     return ":".join(value[i:i + 2] for i in range(0, 12, 2))
 
 
@@ -29,7 +29,7 @@ def prefix(value):
     value = str(value).strip().rstrip(".")
     parts = value.split(".")
     if len(parts) != 3:
-        raise ValueError("IP前3桁を入力してください（例:192.168.0）")
+        raise ValueError('Enter the first three IP octets (example: 192.168.0)')
     ipaddress.IPv4Address(value + ".1")
     return value
 
@@ -44,24 +44,24 @@ def network_config(settings, interface):
     start, end, first = (int(settings.get(key, default)) for key, default in (
         ("target_start", 215), ("target_end", 254), ("target_next", 220)))
     if not 1 <= work_start <= work_end <= 254 or not 1 <= start <= first <= end <= 254:
-        raise ValueError("IP範囲・開始番号を確認してください（1～254）")
+        raise ValueError('Check IP range and starting number (1-254)')
     work = [f"{work_prefix}.{n}" for n in range(work_start, work_end + 1)]
     if any(ipaddress.IPv4Address(ip) not in pc_network for ip in work):
-        raise ValueError("作業IPは選択したPCネットワーク内に設定してください")
+        raise ValueError('Work IP must be inside the selected PC subnet')
     work = [ip for ip in work if ip != str(pc) and ip not in (str(pc_network.network_address), str(pc_network.broadcast_address))]
     targets = [f"{target_prefix}.{n}" for n in list(range(first, end + 1)) + list(range(start, first))]
     mask = str(settings.get("target_mask") or "255.255.255.0")
     gateway = str(settings.get("target_gateway") or target_prefix + ".1")
     target_network = ipaddress.IPv4Network(f"{targets[0]}/{mask}", strict=False)
     if ipaddress.IPv4Address(gateway) not in target_network or gateway in (str(target_network.network_address), str(target_network.broadcast_address)):
-        raise ValueError("目標ゲートウェイは目標ネットワーク内に設定してください")
+        raise ValueError('Target gateway must be inside the target subnet')
     if any(ipaddress.IPv4Address(ip) not in target_network or ip in (
             str(target_network.network_address), str(target_network.broadcast_address)) for ip in targets):
-        raise ValueError("目標IP範囲とサブネットマスクが一致しません")
+        raise ValueError('Target IP range does not match subnet mask')
     if str(pc) in targets or set(work).intersection(targets):
-        raise ValueError("作業IP・目標IP・PCのIPを重複させないでください")
+        raise ValueError('Work IP, target IP and PC IP must not overlap')
     if interface.get("gateway") in work or gateway in targets:
-        raise ValueError("ゲートウェイを割当範囲から除外してください")
+        raise ValueError('Exclude the gateway from the allocation range')
     return {"work": work, "targets": targets, "mask": mask, "gateway": gateway,
             "work_mask": str(pc_network.netmask), "work_gateway": interface.get("gateway") or work_prefix + ".1"}
 
@@ -124,7 +124,7 @@ def select_work_interface(settings, interface):
         candidates = [item for item in addresses if first in ipaddress.IPv4Network(f"{item['ip']}/{item['prefix_length']}", strict=False)
                       and last in ipaddress.IPv4Network(f"{item['ip']}/{item['prefix_length']}", strict=False)]
         if not candidates:
-            raise ValueError('このネットワーク接続のIPから作業IPへ接続できません。Base IPを確認してください')
+            raise ValueError('This adapter cannot reach the work IP. Check Base IP.')
         candidates.sort(key=lambda item: (item['ip'].rsplit('.', 1)[0] != segment, -item['prefix_length']))
         selected = candidates[0]
     else:
@@ -200,7 +200,7 @@ class Journal:
         except FileNotFoundError:
             self.data = {"devices": {}, "assignments": {}}
         except (ValueError, OSError):
-            raise ValueError("IP割当記録を読めません。記録を確認してください")
+            raise ValueError('Cannot read IP allocation journal. Check saved records.')
         self.data.setdefault("devices", {})
         self.data.setdefault("assignments", {})
         self.data.setdefault("active_work", {})
@@ -231,14 +231,14 @@ class Journal:
                 assignments[device_mac] = {"ip": ip, "state": "sticker", "time": time.time()}
                 self.save()
                 return ip
-            raise ValueError("目標IPの空きがありません")
+            raise ValueError('No available target IP')
 
     def hold_work(self, device_mac, ip, interface_id):
         with self.lock:
             device_mac = mac(device_mac)
             old = self.data["active_work"].get(device_mac)
             if old and (old["ip"] != ip or old["interface_id"] != interface_id):
-                raise ValueError("実行中MACは別の作業IPへ変更できません")
+                raise ValueError('Running MAC cannot be moved to another work IP')
             self.data["active_work"][device_mac] = old or {
                 "ip": ip, "interface_id": interface_id, "time": time.time()}
             self.save()
@@ -291,7 +291,7 @@ class Link:
         self.pc_mac = mac(get_if_hwaddr(self.id))
         self.pc_ip = interface['ip'] if verify_ip else get_if_addr(self.id)
         if self.pc_mac != mac(interface["mac"]):
-            raise ValueError("選択したネットワーク接続のMACが変更されています。ネットワークを再検索してください")
+            raise ValueError('Selected adapter MAC changed. Rescan network adapters')
 
     def arp(self, ip, target_mac=None):
         source_ip = arp_source_ip(getattr(self, 'interface', {}), self.pc_ip, ip)
@@ -345,16 +345,16 @@ class Link:
         ipaddress.IPv4Address(gateway)
         values = [ip, "80", mask, gateway, gateway, name, *credentials]
         if any(";" in str(value) for value in values):
-            raise ValueError("ネットワーク設定にセミコロンは使用できません")
+            raise ValueError('Network settings cannot contain semicolons')
         payload = MAGIC + SET + bytes.fromhex(device_mac.replace(":", "")) + ";".join(values).encode("ascii")
         if len(payload) > 246:
-            raise ValueError("IP変更パケットが長すぎます")
+            raise ValueError('IP-change packet is too long')
         sniffer = self.AsyncSniffer(iface=self.id, filter="ether proto 0x0809", store=True)
         sniffer.start()
         try:
             time.sleep(.15)
             if self.stopped():
-                raise ValueError("処理中止")
+                raise ValueError('Operation cancelled')
             self.sendp(self.Ether(src=self.pc_mac, dst="ff:ff:ff:ff:ff:ff", type=ETHER_TYPE) /
                        self.Raw(payload.ljust(246, b"\0")), iface=self.id, verbose=False)
             time.sleep(1)
@@ -366,7 +366,7 @@ class Link:
             raw = bytes(packet[self.Ether].payload)
             if raw[:6] == MAGIC + ACK and len(raw) >= 13 and mac(raw[6:12].hex()) == self.pc_mac:
                 if raw[12] != 1:
-                    raise ValueError("カメラがIP変更を拒否しました")
+                    raise ValueError('Camera rejected IP change')
                 return parse_info(raw[13:])
         # Lost ACK is uncertain: caller checks actual MAC/IP, never resends blindly.
         return None

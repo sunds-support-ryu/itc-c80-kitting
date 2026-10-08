@@ -1,4 +1,5 @@
 """Source-based launcher: no custom packaged EXE and no console window."""
+from i18n import ui, set_language, localize_widgets
 import importlib
 import os
 from pathlib import Path
@@ -15,6 +16,11 @@ def main():
     with (log_dir / 'script_launcher.log').open('a', encoding='utf-8', buffering=1) as log:
         sys.stdout = sys.stderr = log
         try:
+            import json
+            try:
+                settings=json.loads((root/'records/settings.json').read_text(encoding='utf-8'))
+            except (OSError, ValueError):settings={}
+            set_language(settings.get('ui_language','ja'))
             print('Python:', sys.version, '\nExecutable:', sys.executable, '\nRoot:', root)
             if sys.version_info < (3, 9):
                 raise RuntimeError('Python 3.9 or later is required.')
@@ -40,7 +46,7 @@ def main():
                 from tkinter import messagebox
                 window = tk.Tk()
                 window.withdraw()
-                messagebox.showerror('ITC-C80', 'Launcher failed. See data/logs/script_launcher.log.', parent=window)
+                messagebox.showerror(ui('ITC-C80'), ui('Launcher failed. See data/logs/script_launcher.log.'), parent=window)
                 window.destroy()
             return 1
 

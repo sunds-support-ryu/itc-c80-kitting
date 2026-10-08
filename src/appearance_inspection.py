@@ -1,35 +1,4 @@
-"""
-STEP1 - 外観証拠収集
-
-Step2の四枠にUSB Camera映像を表示し、外観確認を必須とする。
-外観OK/NGのどちらも確認完了後に初期化・RTSP検査へ進む。外観NGは撮影した問題箇所を
-左ドラッグで囲み、右クリックで最後の枠を削除して確定・保存する。
-単独実行時はUSB Camera選択、MAC入力、任意のSN入力で外観証拠を保存する。
-
-保存規約は SAVE_LAYOUT.md を参照する。
-画像: evidence/YYYY-MM-DD/B/B-{SN}_{MAC}_{日時}.jpg
-記録: records/step1_evidence.csv
-MACは必須、SNは任意。元画像解像度と元画像座標の枠を保存し、
-既存画像を上書きしない。
-
-AI MAINTENANCE RULES
-===============================================================================
-
-1. MACは必須
-2. SNは任意
-3. 保存画像名Prefixは B-
-4. 元画像解像度で保存
-5. UI表示用縮小画像と元画像座標を混同しない
-6. NG枠は元画像座標で管理する
-7. 既存画像を上書きしない
-8. USB Camera読込でTkinter UIを止めない
-9. Camera検索も別Threadで行う
-10. 保存後はMAC / SNをクリアする
-11. Cameraはユーザーが選択できるようにする
-12. USB Camera再検索を可能にする
-
-===============================================================================
-"""
+'USB appearance capture and evidence helpers. Inspection proceeds after either appearance decision.'
 
 import csv
 import ctypes
@@ -50,7 +19,7 @@ from PIL import Image, ImageTk, ImageDraw
 
 
 # =============================================================================
-# 基本設定
+# Base settings.
 # =============================================================================
 
 from app_paths import APP_ROOT, CODE_DIR
@@ -142,13 +111,7 @@ COLOR_DISABLED = "#AAB2BD"
 # =============================================================================
 
 class CameraWorker:
-    """
-    USB Cameraを別Threadで読み込む。
-
-    Tkinter Main Threadでcap.read()を実行すると
-    UIが止まる可能性があるため、
-    Camera処理は別Threadで行う。
-    """
+    'Read USB frames on a worker thread to avoid blocking the Tk main thread.'
 
     def __init__(
         self,
@@ -338,7 +301,7 @@ class CameraWorker:
         if self.capture is None:
 
             self.error = (
-                "USB Cameraを開けません。"
+                'Cannot open USB camera.'
             )
 
             self.connected = False
@@ -399,20 +362,7 @@ class CameraWorker:
 # =============================================================================
 
 def normalize_mac(value):
-    """
-    MAC入力を整形。
-
-    対応例:
-
-        AA:BB:CC:DD:EE:FF
-        AA-BB-CC-DD-EE-FF
-        AABBCCDDEEFF
-
-    return:
-
-        AA:BB:CC:DD:EE:FF
-        AA-BB-CC-DD-EE-FF
-    """
+    'Normalize supported colon, hyphen and compact MAC formats.'
 
     compact = re.sub(
         r"[^0-9A-Fa-f]",
@@ -463,10 +413,7 @@ def save_jpeg(
     image,
     quality=95
 ):
-    """
-    日本語Path対策のため
-    cv2.imwriteではなくimencode + tofileを使用。
-    """
+    'Use imencode and tofile to support Unicode paths.'
 
     success, encoded = cv2.imencode(
         ".jpg",
@@ -526,7 +473,7 @@ class Step1UI:
         self.frozen_frame = None
 
 
-        # 元画像座標
+        # Original-image coordinates.
         self.boxes = []
 
 
@@ -565,7 +512,7 @@ class Step1UI:
         # =====================================================================
 
         self.root.title(
-            "Step1 - 外観証拠収集"
+            'Step1 - appearance evidence'
         )
 
 
@@ -615,7 +562,7 @@ class Step1UI:
 
         tk.Label(
             header,
-            text="Step1  外観証拠収集",
+            text='Step1 - appearance evidence',
             bg=COLOR_HEADER,
             fg="white",
             font=(
@@ -631,7 +578,7 @@ class Step1UI:
 
         self.header_status = tk.Label(
             header,
-            text="● Camera検索中",
+            text='Searching cameras',
             bg=COLOR_HEADER,
             fg="#D2D8E0",
             font=(
@@ -751,7 +698,7 @@ class Step1UI:
 
         tk.Label(
             info_row,
-            text="SN  ※任意",
+            text='SN (optional)',
             bg=COLOR_CARD,
             fg=COLOR_SUBTEXT,
             font=(
@@ -834,12 +781,12 @@ class Step1UI:
 
 
         # ---------------------------------------------------------------------
-        # 再検索
+        # Rescan.
         # ---------------------------------------------------------------------
 
         self.camera_refresh_button = tk.Button(
             info_row,
-            text="再検索",
+            text='Rescan',
             command=self.scan_usb_cameras,
             bg=COLOR_GRAY,
             fg="white",
@@ -869,12 +816,12 @@ class Step1UI:
 
 
         # ---------------------------------------------------------------------
-        # 接続
+        # Connect.
         # ---------------------------------------------------------------------
 
         self.camera_button = tk.Button(
             info_row,
-            text="接続",
+            text='Connect',
             command=self.connect_camera,
             bg=COLOR_BLUE,
             fg="white",
@@ -926,7 +873,7 @@ class Step1UI:
 
         self.status_label = tk.Label(
             status_card,
-            text="USB Camera検索中...",
+            text='Searching USB cameras...',
             bg=COLOR_CARD,
             fg=COLOR_SUBTEXT,
             font=(
@@ -947,8 +894,7 @@ class Step1UI:
         self.help_label = tk.Label(
             status_card,
             text=(
-                "左ドラッグ = 枠選択    "
-                "右クリック = 1つ戻す"
+                'Left drag: draw a box; right click: undo'
             ),
             bg=COLOR_CARD,
             fg=COLOR_SUBTEXT,
@@ -1062,12 +1008,12 @@ class Step1UI:
 
 
         # ---------------------------------------------------------------------
-        # 撮影
+        # Capture.
         # ---------------------------------------------------------------------
 
         self.capture_button = tk.Button(
             button_row,
-            text="撮影",
+            text='Capture',
             command=self.capture_image,
             width=13,
             bg=COLOR_BLUE,
@@ -1093,12 +1039,12 @@ class Step1UI:
 
 
         # ---------------------------------------------------------------------
-        # 再撮影
+        # Retake image.
         # ---------------------------------------------------------------------
 
         self.retry_button = tk.Button(
             button_row,
-            text="再撮影",
+            text='Retake',
             command=self.retry_capture,
             width=13,
             bg=COLOR_ORANGE,
@@ -1129,7 +1075,7 @@ class Step1UI:
 
         self.clear_button = tk.Button(
             button_row,
-            text="枠を全削除",
+            text='Clear all boxes',
             command=self.clear_boxes,
             width=13,
             bg=COLOR_GRAY,
@@ -1160,7 +1106,7 @@ class Step1UI:
 
         self.save_button = tk.Button(
             button_row,
-            text="確定・保存",
+            text='Confirm and save',
             command=self.confirm_save,
             width=16,
             bg=COLOR_GREEN,
@@ -1204,7 +1150,7 @@ class Step1UI:
 
         self.box_count_label = tk.Label(
             bottom_card,
-            text="枠 : 0",
+            text='Boxes: 0',
             bg=COLOR_CARD,
             fg=COLOR_TEXT,
             font=(
@@ -1224,7 +1170,7 @@ class Step1UI:
 
         self.save_path_label = tk.Label(
             bottom_card,
-            text="保存先 : evidence",
+            text='Save folder: evidence',
             bg=COLOR_CARD,
             fg=COLOR_SUBTEXT,
             font=(
@@ -1250,7 +1196,7 @@ class Step1UI:
         self.update_preview()
 
 
-        # 起動後USB Camera自動検索
+        # Automatically discover USB cameras after startup.
         self.root.after(
             300,
             self.scan_usb_cameras
@@ -1262,15 +1208,10 @@ class Step1UI:
     # =========================================================================
 
     def scan_usb_cameras(self):
-        """
-        Camera 0～9を検索。
+        'Discover USB cameras 0-9 on a worker thread so the UI remains responsive.'
 
-        Camera検索中もUIを止めないため
-        別Threadで実行。
-        """
-
-        # 現在Camera使用中の場合、
-        # 再検索前に解放する。
+        # When a camera is in use,
+        # Rescan.前に解放する。
         if self.camera is not None:
 
             self.camera.stop()
@@ -1290,7 +1231,7 @@ class Step1UI:
 
 
         self.camera_combo.set(
-            "検索中..."
+            'Searching...'
         )
 
 
@@ -1310,13 +1251,13 @@ class Step1UI:
 
 
         self.status_label.config(
-            text="USB Camera検索中...",
+            text='Searching USB cameras...',
             fg=COLOR_BLUE
         )
 
 
         self.header_status.config(
-            text="● Camera検索中",
+            text='Searching cameras',
             fg="#F6C85F"
         )
 
@@ -1367,7 +1308,7 @@ class Step1UI:
                     continue
 
 
-                # 実際にFrame取得可能か確認
+                # Verify actual frame capture.
                 ret, frame = (
                     cap.read()
                 )
@@ -1469,15 +1410,14 @@ class Step1UI:
 
             self.status_label.config(
                 text=(
-                    f"USB Camera "
-                    f"{len(values)}台 検出"
+                    f'USB Camera {len(values)}cameras detected'
                 ),
                 fg=COLOR_GREEN
             )
 
 
             self.header_status.config(
-                text="● Camera検出",
+                text='Camera detected',
                 fg="#6EE7A0"
             )
 
@@ -1485,7 +1425,7 @@ class Step1UI:
         else:
 
             self.camera_combo.set(
-                "Cameraなし"
+                'No camera'
             )
 
 
@@ -1495,13 +1435,13 @@ class Step1UI:
 
 
             self.status_label.config(
-                text="USB Cameraが見つかりません",
+                text='USB camera not found',
                 fg=COLOR_RED
             )
 
 
             self.header_status.config(
-                text="● Cameraなし",
+                text='No camera',
                 fg="#FF7777"
             )
 
@@ -1529,7 +1469,7 @@ class Step1UI:
 
             messagebox.showwarning(
                 "USB Camera",
-                "Cameraを選択してください。"
+                'Select a camera.'
             )
 
             return
@@ -1580,14 +1520,14 @@ class Step1UI:
 
         self.status_label.config(
             text=(
-                f"{selected} 接続中..."
+                f'{selected} connecting...'
             ),
             fg=COLOR_BLUE
         )
 
 
         self.header_status.config(
-            text="● 接続中",
+            text='Connecting',
             fg="#F6C85F"
         )
 
@@ -1605,7 +1545,7 @@ class Step1UI:
 
             messagebox.showwarning(
                 "Camera",
-                "USB Cameraを接続してください。"
+                'Connect a USB camera.'
             )
 
             return
@@ -1620,7 +1560,7 @@ class Step1UI:
 
             messagebox.showwarning(
                 "Camera",
-                "映像がありません。"
+                'No image available.'
             )
 
             return
@@ -1638,13 +1578,13 @@ class Step1UI:
 
 
         self.status_label.config(
-            text="問題箇所をマウスで選択してください",
+            text='Select the affected area with the mouse',
             fg=COLOR_ORANGE
         )
 
 
         self.header_status.config(
-            text="● 編集中",
+            text='Editing',
             fg="#F6C85F"
         )
 
@@ -1670,7 +1610,7 @@ class Step1UI:
 
 
         self.status_label.config(
-            text="リアルタイム映像",
+            text='Live video',
             fg=COLOR_GREEN
         )
 
@@ -1916,7 +1856,7 @@ class Step1UI:
         )
 
 
-        # 小さすぎる枠は無視
+        # Ignore boxes that are too small.
         if (
             right - left >= 8
             and
@@ -2276,7 +2216,7 @@ class Step1UI:
             if self.mode == "LIVE":
 
                 self.status_label.config(
-                    text="リアルタイム映像",
+                    text='Live video',
                     fg=COLOR_GREEN
                 )
 
@@ -2357,11 +2297,11 @@ class Step1UI:
             if not exists:
 
                 writer.writerow([
-                    "日時",
+                    'Timestamp',
                     "SN",
                     "MAC",
-                    "画像",
-                    "枠数"
+                    'Image',
+                    'Box count'
                 ])
 
 
@@ -2391,8 +2331,8 @@ class Step1UI:
         ):
 
             messagebox.showwarning(
-                "保存",
-                "先に撮影してください。"
+                'Save',
+                'Capture an image first.'
             )
 
             return
@@ -2421,8 +2361,7 @@ class Step1UI:
             messagebox.showerror(
                 "MAC",
                 (
-                    "MACを確認してください。\n\n"
-                    "例：AA:BB:CC:DD:EE:FF"
+                    'Check the MAC address. Example: AA:BB:CC:DD:EE:FF'
                 )
             )
 
@@ -2453,16 +2392,13 @@ class Step1UI:
         # ---------------------------------------------------------------------
 
         confirm_text = (
-            f"MAC : {mac_display}\n"
-            f"SN  : {sn}\n"
-            f"枠  : {len(self.boxes)}\n\n"
-            "保存しますか？"
+            f'MAC : {mac_display}\nSN  : {sn}\nBoxes: {len(self.boxes)}\n\nSave?'
         )
 
 
         result = (
             messagebox.askyesno(
-                "保存確認",
+                'Confirm save',
                 confirm_text
             )
         )
@@ -2506,8 +2442,8 @@ class Step1UI:
         if not success:
 
             messagebox.showerror(
-                "保存NG",
-                "画像を保存できません。"
+                'Save NG',
+                'Cannot save image.'
             )
 
             return
@@ -2535,15 +2471,14 @@ class Step1UI:
 
         self.save_path_label.config(
             text=(
-                f"保存完了 : "
-                f"{filename}"
+                f'Saved: {filename}'
             ),
             fg=COLOR_GREEN
         )
 
 
         self.status_label.config(
-            text="保存完了",
+            text='Saved',
             fg=COLOR_GREEN
         )
 
@@ -2595,8 +2530,7 @@ class Step1UI:
 
         self.box_count_label.config(
             text=(
-                f"枠 : "
-                f"{len(self.boxes)}"
+                f'Boxes: {len(self.boxes)}'
             )
         )
 
@@ -2705,7 +2639,7 @@ class Step1UI:
 # =============================================================================
 
 def list_usb_camera_devices():
-    """DirectShowと同じ順序で名前を取得。列挙だけで映像デバイスを開かない。"""
+    'Enumerate DirectShow names in device order without opening video devices.'
     if os.name != "nt":
         return []
     class GUID(ctypes.Structure):
@@ -2771,7 +2705,7 @@ def list_usb_camera_devices():
 
 
 class FrameRate:
-    """直近2秒の受信フレームから実測FPSを計算。再描画回数は数えない。"""
+    'Measure FPS from received frames over the last two seconds, not repaint calls.'
     def __init__(self):
         self.lock = threading.Lock()
         self.times = deque(maxlen=600)
@@ -2799,7 +2733,7 @@ class FrameRate:
 
 
 class InspectionUSBReader:
-    """Step2共有USB入力。切断時に古い画像を破棄し、再接続を試みる。"""
+    'Shared USB input; discard stale frames on disconnection and attempt reconnection.'
     def __init__(self, index, name=None, retry=True):
         self.retry = retry
         self.done_event = threading.Event()
@@ -2810,7 +2744,7 @@ class InspectionUSBReader:
         self.frame = None
         self.frame_time = 0
         self.frame_rate = FrameRate()
-        self.error = "USB Camera 接続中"
+        self.error = 'Connecting USB camera'
 
     def start(self):
         threading.Thread(target=self.run, daemon=True).start()
@@ -2840,16 +2774,16 @@ class InspectionUSBReader:
                     self.index = self.index if (self.index, self.name) in devices else next(
                         (index for index, name in devices if name == self.name), None)
                     if self.index is None:
-                        raise RuntimeError("選択したUSB Cameraなし · 再接続待ち")
+                        raise RuntimeError('Selected USB camera unavailable - waiting for reconnection')
                 cap = cv2.VideoCapture(self.index, cv2.CAP_DSHOW) if os.name == "nt" else cv2.VideoCapture(self.index)
                 if not cap.isOpened():
-                    raise RuntimeError("USB Cameraを開けません · 再接続待ち")
-                # デバイス標準の映像形式を利用する。
-                # USB 2.0 Cameraは1080p/MJPGを指定すると黒いフレームを返すことがある。
+                    raise RuntimeError('Cannot open USB camera - waiting for reconnection')
+                # Use the device's default video format.
+                # Some USB 2.0 cameras return black frames when forced to 1080p/MJPG.
                 while not self.stop_event.is_set():
                     ok, frame = cap.read()
                     if not ok:
-                        raise RuntimeError("USB映像なし · 接続を確認してください")
+                        raise RuntimeError('No USB frames - check connection')
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     with self.lock:
                         self.frame, self.frame_time = frame, time.monotonic()
@@ -2871,10 +2805,10 @@ class InspectionUSBReader:
 
 
 def save_exterior_evidence(camera, image, boxes, directory=EVIDENCE_DIR, csv_file=CSV_FILE):
-    """元解像度の問題箇所とSN/MACを記録。既存画像は上書きしない。"""
+    'Record original-resolution defects with SN/MAC without overwriting existing evidence.'
     mac_display, mac_filename = normalize_mac(camera.mac)
     if mac_display is None:
-        raise ValueError("外観証拠には有効なMACが必要です。")
+        raise ValueError('A valid MAC is required for appearance evidence.')
     os.makedirs(directory, exist_ok=True)
     output = image.copy()
     draw = ImageDraw.Draw(output)
@@ -2886,18 +2820,18 @@ def save_exterior_evidence(camera, image, boxes, directory=EVIDENCE_DIR, csv_fil
     with open(csv_file, "a", newline="", encoding="utf-8-sig") as target:
         writer = csv.writer(target)
         if not exists:
-            writer.writerow(["日時", "SN", "MAC", "画像", "枠数"])
+            writer.writerow(['Timestamp', "SN", "MAC", 'Image', 'Box count'])
         writer.writerow([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), camera.sn,
                          mac_display, os.path.relpath(path, os.path.dirname(csv_file) or "."), len(boxes)])
     return path
 
 
 def preview_exterior_evidence(parent, camera, image):
-    """凍結画像上で問題箇所を指定して保存。キャンセル時は外観検査を継続。"""
+    'Mark defects on the frozen image; cancellation resumes appearance inspection.'
     window = tk.Toplevel(parent)
-    window.title(f"外観証拠 · SN: {camera.sn} · MAC: {camera.mac}")
+    window.title(f'Appearance evidence - SN: {camera.sn} · MAC: {camera.mac}')
     window.transient(parent)
-    tk.Label(window, text="左ドラッグ: 問題箇所を囲む / 右クリック: 最後の枠を削除").pack(padx=12, pady=8)
+    tk.Label(window, text='Left drag: mark defect; right click: remove last box').pack(padx=12, pady=8)
     preview = image.copy()
     preview.thumbnail((960, 540), Image.Resampling.LANCZOS)
     photo = ImageTk.PhotoImage(preview, master=window)
@@ -2933,12 +2867,12 @@ def preview_exterior_evidence(parent, camera, image):
             canvas.delete(boxes.pop()[1])
     def save():
         if not boxes:
-            messagebox.showwarning("問題箇所", "問題箇所を枠で囲んでください。", parent=window)
+            messagebox.showwarning('Affected area', 'Draw a box around the affected area.', parent=window)
             return
         try:
             result["path"] = save_exterior_evidence(camera, image, [box for box, item in boxes])
         except Exception as error:
-            messagebox.showerror("保存失敗", str(error), parent=window)
+            messagebox.showerror('Save failed', str(error), parent=window)
             return
         window.destroy()
     canvas.bind("<Button-1>", down)
@@ -2947,7 +2881,7 @@ def preview_exterior_evidence(parent, camera, image):
     canvas.bind("<Button-3>", undo)
     controls = tk.Frame(window)
     controls.pack(fill="x", padx=12, pady=12)
-    for label, action in [("最後の枠を削除", undo), ("確定・保存", save), ("キャンセル", window.destroy)]:
+    for label, action in [('Remove last box', undo), ('Confirm and save', save), ('Cancel', window.destroy)]:
         tk.Button(controls, text=label, command=action).pack(side="left", expand=True, padx=5)
     window.grab_set()
     parent.wait_window(window)

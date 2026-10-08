@@ -4,6 +4,10 @@ These rules apply to all work in this project. The user's requirement is an
 English-based architecture with mandatory language packs and support for
 multilingual operating systems.
 
+Read [docs/AGENT_LESSONS.md](docs/AGENT_LESSONS.md) before changes involving
+startup, updates, networking, persistence or inspection transitions. Apply the
+listed regression checks when touching the corresponding failure boundary.
+
 ## Architecture and localization (mandatory)
 
 - Build and validate the architecture in English first. Use English identifiers,

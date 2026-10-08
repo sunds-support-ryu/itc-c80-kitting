@@ -208,7 +208,7 @@ class BrowserInspection(engine.InspectionUI):
         self.protection_logged = set()
         for device_mac, record in self.journal.data["active_work"].items():
             self.working[device_mac] = record["ip"]
-            console_log(f"[MAC保護 復元] MAC={device_mac} IP={record['ip']} 改IP禁止")
+            console_log(f'[MAC protection restored] MAC={device_mac} IP={record['ip']} IP change prohibited')
         self.apply_access_settings()
         for widget, value in ((self.start_entry, self.settings.get("work_start", 150)),
                               (self.end_entry, self.settings.get("work_end", 189))):
@@ -223,7 +223,7 @@ class BrowserInspection(engine.InspectionUI):
     def update_network_label(self):
         if not self.settings.get("network_id"):
             count = len(self.settings.get("network_interfaces", []))
-            self.network_label.config(text=f"ネットワーク未指定\n設定で接続先を選択してください\n検索・記録済み: {count}件")
+            self.network_label.config(text=f'No network adapter selected. Select an adapter in settings. Saved adapters: {count}items')
         else:
             super().update_network_label()
 
@@ -243,7 +243,7 @@ class BrowserInspection(engine.InspectionUI):
         if count not in (1, 2, 4, 6):
             count = 4
         if any(p.processing_camera or p.camera for p in self.panels[count:]):
-            raise ValueError("使用中のカメラ枠は非表示にできません")
+            raise ValueError('Cannot hide an occupied camera panel')
         self.mode_count = count
         self.mode_var.set(count)
         self.select_panel(min(self.selected_panel, count - 1))
@@ -264,7 +264,7 @@ class BrowserInspection(engine.InspectionUI):
                 self.store.update(identity, step='CONFIG', results={'ir_cut': 'OK', 'ir_cut_method': 'manual'})
                 self.start_config(panel)
             else:
-                raise ValueError('RTSP確認中です')
+                raise ValueError('RTSP verification in progress')
             return
         return super().mark_ok(index)
 
@@ -285,7 +285,7 @@ class BrowserInspection(engine.InspectionUI):
             if check.stage == 'COVER':
                 self.rtsp_started.setdefault(identity, now)
                 if 'NG' in getattr(panel.reader, 'last_status', '') or now - self.rtsp_started[identity] >= 15:
-                    self.finish_ng_direct(panel, 'E1', 'RTSP不具合', 'rtsp')
+                    self.finish_ng_direct(panel, 'E1', 'RTSP defect', 'rtsp')
                     continue
                 if image is None:
                     self.rtsp_counts[identity] = 0
@@ -295,7 +295,7 @@ class BrowserInspection(engine.InspectionUI):
                     if self.rtsp_counts[identity] >= 3:
                         check.start(now)
                         self.store.update(identity, step='IR_CUT_BW', results={'rtsp': 'OK', 'ir_cut': None})
-                        console_log(f'[RTSP 自動OK → IR-CUT自動開始] MAC={identity}')
+                        console_log(f'[RTSP auto OK -> IR-CUT started] MAC={identity}')
                 if fresh:
                     self.ir_frame_times[identity] = stamp
             if check.stage in ('BW', 'COLOR'):
@@ -306,16 +306,16 @@ class BrowserInspection(engine.InspectionUI):
             if check.stage == 'PASS':
                 check.stage = 'PURPLE'
                 self.store.update(identity, step='IR_CUT_CONFIRM', results={'light_sensor': 'OK'})
-            messages = {'COVER': 'RTSP接続確認中。',
-                        'BW': '操作①：蓋を被ってください。白黒への切替を自動確認します。',
-                        'COLOR': '操作②：蓋を外してください。カラーへの復帰を自動確認します。',
-                        'PURPLE': '紫色部分を目視確認してください。紫色なし：OK ／ 紫色あり：NG。',
-                        'TIMEOUT': 'IR-CUT / 光センサーの切替を確認できません。NGを押してください。'}
-            panel.status.config(text=('RTSP · ' if check.stage == 'COVER' else '紫色確認 · ' if check.stage == 'PURPLE' else 'IR-CUT / 光センサー · ') + messages[check.stage])
+            messages = {'COVER': 'Verifying RTSP connection.',
+                        'BW': 'Operation 1: cover the camera. Waiting for automatic black-and-white confirmation.',
+                        'COLOR': 'Operation 2: remove the cover. Waiting for automatic color confirmation.',
+                        'PURPLE': 'Check for purple areas. No purple: OK / purple present: NG.',
+                        'TIMEOUT': 'IR-CUT / light sensor switching unverified. Press NG.'}
+            panel.status.config(text=('RTSP · ' if check.stage == 'COVER' else 'Purple check -' if check.stage == 'PURPLE' else 'IR-CUT / light sensor -') + messages[check.stage])
             panel.status_detail.config(text=messages[check.stage])
             panel.show_message(messages[check.stage], '#d97706' if check.stage == 'BW' else '#2563eb' if check.stage == 'COLOR' else engine.COLOR_GREEN)
-            panel.ok.config(text='OK · config書込へ', state='normal' if check.stage == 'PURPLE' else 'disabled')
-            panel.ng.config(text='RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG' if check.stage == 'PURPLE' else 'IR-CUT / 光センサー NG', state='normal' if not self.ng_preview_open else 'disabled')
+            panel.ok.config(text='OK - import config', state='normal' if check.stage == 'PURPLE' else 'disabled')
+            panel.ng.config(text='RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG' if check.stage == 'PURPLE' else 'IR-CUT / light sensor NG', state='normal' if not self.ng_preview_open else 'disabled')
             if self.mode_count == 1:
                 if panel.ok.cget('state') == 'normal':
                     panel.ok.config(text=panel.ok.cget('text') + ' [Enter]')
@@ -326,6 +326,7 @@ class BrowserInspection(engine.InspectionUI):
                 console_log(f'[IR-CUT] MAC={identity} {previous}→{check.stage} {check.metrics}')
 
     def finish_ng_direct(self, panel, category, reason, result_key):
+        reason_code = {'rtsp': 'RTSP_FAILURE', 'light_sensor': 'IR_CUT_LIGHT_SENSOR_FAILURE', 'ir_cut': 'IR_CUT_PURPLE_DEFECT'}.get(result_key, 'OTHER_FAILURE')
         camera = panel.camera
         if camera is None:
             return
@@ -337,8 +338,8 @@ class BrowserInspection(engine.InspectionUI):
         try:
             evidence = self.save_evidence(camera, image, category)
         except OSError as error:
-            console_log(f'[NG証拠保存待ち] MAC={identity} {error}')
-        self.store.update(identity, results={result_key: 'NG'})
+            console_log(f'[NG evidence save pending] MAC={identity} {error}')
+        self.store.update(identity, ng_reason_code=reason_code, results={result_key: 'NG'})
         self.store.finish(identity, 'NG', reason)
         engine.save_result(camera, 'NG', '-', ng_reason=reason, evidence_path=evidence)
         self.approved.discard(identity)
@@ -349,27 +350,27 @@ class BrowserInspection(engine.InspectionUI):
         panel.ok.config(state='disabled')
         panel.ng.config(state='disabled')
         panel.status.config(text='NG · ' + reason)
-        panel.show_message('NG · ' + reason + '\n取外して次のカメラへ', engine.COLOR_RED)
+        panel.show_message('NG · ' + reason + '\nDisconnect and proceed to the next camera', engine.COLOR_RED)
         if self.flow_started:
             self.watch_removal(camera, camera.ip, discover=True)
-        console_log(f'[NG終了] MAC={identity} {reason}')
+        console_log(f'[NG completed] MAC={identity} {reason}')
 
     def start_config(self, panel):
         if self.demo:
             return
         camera = panel.camera
         if camera is None:
-            raise ValueError('設定書込対象カメラがありません')
+            raise ValueError('No camera selected for config import')
         identity = flow.mac(camera.mac)
         if identity in self.config_dispatched:
             return
         self.config_dispatched.add(identity)
         self.config_running.add(identity)
-        panel.finish('設定書込待ち')
+        panel.finish('Waiting for config import')
         panel.show_result('RUNING', camera)
         panel.ok.config(state='disabled')
         panel.ng.config(state='disabled')
-        console_log(f'[IR-CUT OK → config投入] MAC={identity} IP={camera.ip}')
+        console_log(f'[IR-CUT OK -> config dispatched] MAC={identity} IP={camera.ip}')
         def execute():
             try:
                 engine.step3.load_config(self.settings_dir)
@@ -382,7 +383,7 @@ class BrowserInspection(engine.InspectionUI):
                     credential_report=lambda credentials: self.camera_credentials.__setitem__(identity, credentials))
                 self.store.update(identity, step='STICKER' if success else 'CONFIG',
                     access_stage='before' if self.camera_credentials.get(identity) == (engine.USERNAME, engine.PASSWORD) else 'after',
-                    config_uncertain=not success and '拒否' not in detail,
+                    config_uncertain=not success and 'rejected' not in detail,
                     results={'settings': 'OK' if success else 'NG'})
                 self.workflow_events.put(('config_ready' if success else 'config_failed', (camera, detail)))
             except Exception as error:
@@ -404,7 +405,7 @@ class BrowserInspection(engine.InspectionUI):
             return
         interface = self.selected_interface()
         if interface is None:
-            raise ValueError("ネットワーク接続を指定してください")
+            raise ValueError('Select a network adapter')
         self.discovery_busy = True
         self.discovery_error = ""
         allow_moves = self.flow_started
@@ -433,7 +434,7 @@ class BrowserInspection(engine.InspectionUI):
                     device_mac = flow.mac(device["mac"])
                     held = self.journal.data["active_work"].get(device_mac)
                     if held and device_mac not in self.protection_logged:
-                        console_log(f"[MAC保護] MAC={device_mac} IP={held['ip']} SET再送禁止")
+                        console_log(f'[MAC protection] MAC={device_mac} IP={held['ip']} SET resend prohibited')
                         self.protection_logged.add(device_mac)
                     if held and held["interface_id"] != interface["id"]:
                         continue
@@ -452,7 +453,7 @@ class BrowserInspection(engine.InspectionUI):
                         if getattr(self, "resuming", False) and state.get("status") != "OK" and device_mac not in self.restored_errors:
                             self.restored_errors.add(device_mac)
                             camera = engine.CameraInfo(device.get("ip", state["new_ip"]), state["sn"], device_mac)
-                            self.workflow_events.put(("onboarding_failed", (camera, state.get("error", "前回の結果を復元"))))
+                            self.workflow_events.put(("onboarding_failed", (camera, state.get("error", 'Previous result restored'))))
                         continue
                     if recorded.get("state") in ("confirmed", "disconnected"):
                         continue
@@ -479,7 +480,7 @@ class BrowserInspection(engine.InspectionUI):
                     used = set(self.working.values())
                     work_ip = self.working.get(device_mac)
                     if work_ip and work_ip not in config["work"][:self.mode_count]:
-                        console_log(f"[MAC保護] MAC={device_mac} 作業IP={work_ip} は現在のBase IP範囲外。変更禁止")
+                        console_log(f'[MAC protection] MAC={device_mac} work IP={work_ip} is outside Base IP range; modification prohibited')
                         continue
                     if work_ip is None:
                         if len(used) >= self.mode_var.get():
@@ -491,7 +492,7 @@ class BrowserInspection(engine.InspectionUI):
                         else:
                             work_ip = next((ip for ip in config["work"][:self.mode_count] if ip not in used and not link.arp(ip)), None)
                     if work_ip is None:
-                        console_log(f'[作業IP 待機] MAC={device_mac} 空きなし。他のMACの処理を継続')
+                        console_log(f'[Work IP waiting] MAC={device_mac} no free slot; continue other MACs')
                         continue
                     needs_move = device_mac not in self.working and device.get("ip") != work_ip
                     self.journal.hold_work(device_mac, work_ip, interface["id"])
@@ -521,7 +522,7 @@ class BrowserInspection(engine.InspectionUI):
             record = self.store.job["devices"].get(device_mac.replace(":", "").upper(), {}) if self.store.job else {}
             if record.get("config_uncertain") and record.get("results", {}).get("settings") != "OK":
                 if tuple(credentials) == tuple(engine.step3.VERIFY_CREDENTIALS):
-                    raise ValueError("config適用状態が不明です。カメラWebで設定を確認してから「設定適用確認済み」を押してください。再送なし")
+                    raise ValueError('Config application unknown. Check camera Web settings before confirming application. No resend')
                 camera = engine.CameraInfo(work_ip, record.get("sn", device.get("sn", "")), device_mac)
                 engine.step3.verify_identity(f"http://{work_ip}", camera, engine.step3.VERIFY_CREDENTIALS, transport)
                 self.store.update(device_mac, config_uncertain=False, results={"settings": "OK"})
@@ -531,18 +532,18 @@ class BrowserInspection(engine.InspectionUI):
             if needs_move:
                 # Never resend SET after an uncertain response on subsequent scans.
                 if not link.arp(work_ip, device_mac):
-                    engine.send_log(f"[作業IP] MAC={device_mac} → {work_ip}")
+                    engine.send_log(f'[Work IP] MAC={device_mac} → {work_ip}')
                     link.set_ip(device_mac, work_ip, config["work_mask"], config["work_gateway"], credentials)
             if not link.wait_ip(device_mac, work_ip):
-                raise ValueError("作業IPへの変更未確認")
+                raise ValueError('Work IP change unverified')
             self.store.update(device_mac, status="CONNECTING", step="HTTP", results={"network": "OK"})
             deadline = time.monotonic() + 60
-            last_error = "HTTP待機"
+            last_error = 'Waiting for HTTP'
             while time.monotonic() < deadline and not engine.APP_STOP.is_set():
                 try:
                     status, body = transport(f"http://{work_ip}" + engine.INFO_PATH, credentials=credentials)
                     if status in (401, 403):
-                        raise ValueError(f"HTTP={status} config書込前のアクセス認証を確認してください")
+                        raise ValueError(f'HTTP={status} verify pre-config access credentials')
                     data = json.loads(body) if status == 200 else {}
                     camera = engine.extract_camera_info(work_ip, data) if data else None
                     model = engine.find_value(data, {"model", "modelname", "devicemodel"})
@@ -553,16 +554,16 @@ class BrowserInspection(engine.InspectionUI):
                         self.store.update(device_mac, sn=camera.sn, status="TESTING", step="APPEARANCE")
                         self.workflow_events.put(("onboarded", camera))
                         return
-                    last_error = f"HTTP={status} MAC/モデル未確認"
+                    last_error = f'HTTP={status} MAC/model unverified'
                 except OSError as error:
                     last_error = str(error)
-                console_log(f"[作業IP HTTP待機] MAC={device_mac} IP={work_ip} {last_error}")
+                console_log(f'[Work IP HTTP waiting] MAC={device_mac} IP={work_ip} {last_error}')
                 time.sleep(2)
-            raise ValueError(f"IP={work_ip} HTTP確認失敗: {last_error}")
+            raise ValueError(f'IP={work_ip} HTTP verification failed: {last_error}')
         except Exception as error:
             self.store.update(device_mac, status="ERROR", step="CONNECTING", error=str(error))
             self.workflow_events.put(("onboarding_failed", (engine.CameraInfo(work_ip, device.get("sn", ""), device_mac), str(error))))
-            engine.send_log(f"[作業IP Error] MAC={device_mac} IP={work_ip} {error}")
+            engine.send_log(f'[Work IP Error] MAC={device_mac} IP={work_ip} {error}')
         finally:
             if "transport" in locals() and hasattr(transport, "close"):
                 transport.close()
@@ -570,29 +571,29 @@ class BrowserInspection(engine.InspectionUI):
 
     def start_workflow(self):
         if self.recovery_pending:
-            raise ValueError("前回作業の再開または新しい作業を選択してください")
+            raise ValueError('Choose whether to resume the previous job or start a new one')
         interface = self.selected_interface()
         if interface is None or not self.settings.get("allowed_models"):
-            raise ValueError("ネットワーク接続と許可するモデルを設定してください")
+            raise ValueError('Configure the network adapter and allowed models')
         if not getattr(self, "resuming", False) and any(job.get("state") in ("sticker", "changing") for job in self.journal.data["assignments"].values()):
-            raise ValueError("未完了のIP割当記録があります。記録を確認してから開始してください")
+            raise ValueError('Unfinished IP allocations exist. Check the journal before starting')
         interface = flow.enrich_interfaces([dict(interface)])[0]
         interface = flow.select_work_interface(self.settings, interface)
         console_log(f"[Network] {interface}")
         if os.name == "nt" and not interface.get("prefix_verified"):
-            raise ValueError("PCのサブネット情報を確認できません。ネットワークを再検索してください")
+            raise ValueError('PC subnet information unavailable. Rescan network adapters')
         records = [interface if item["id"] == interface["id"] else item for item in self.settings["network_interfaces"]]
         if not self.persist_settings({"network_interfaces": records}):
-            raise ValueError("ネットワーク記録保存失敗")
+            raise ValueError('Network journal save failed')
         config = flow.network_config(self.settings, interface)
         config["work"] = config["work"][:self.mode_count]
         if len(config["work"]) < self.mode_count:
-            raise ValueError("Base IPから必要台数の連続IPを設定してください")
+            raise ValueError('Configure enough consecutive work IPs from Base IP')
         if not self.store.job:
             carton = self.settings.get("carton", "0001")
             maximum = int(self.settings.get("carton_max", 12))
             if self.store.carton_count(carton) >= maximum:
-                raise ValueError(f"このCartonは{maximum}台に達しました。次のCartonに変更してください")
+                raise ValueError(f'This carton has reached{maximum}cameras. Switch to the next carton')
             self.store.create(carton, self.mode_count, config["work"][0], maximum)
             self.store.job["expected_count"] = min(self.mode_count, maximum - self.store.carton_count(carton))
             self.store.save()
@@ -658,18 +659,18 @@ class BrowserInspection(engine.InspectionUI):
                                         return
                                     record = self.store.job["devices"].get(identity.replace(":", "").upper(), {}) if self.store.job else {}
                                     if record.get("results", {}).get("settings") == "OK":
-                                        self.workflow_events.put(("config_ready", (camera, "設定適用済み・再開")))
+                                        self.workflow_events.put(("config_ready", (camera, 'Config already applied - resume')))
                                     else:
                                         if record.get("results", {}).get("preparation") != "OK":
                                             self.store.update(identity, step="RESET", status="TESTING")
                                             if not await engine.reset_device(session, camera, 3):
-                                                raise ValueError("検査前Resetに失敗")
+                                                raise ValueError('Pre-inspection reset failed')
                                             if not await engine.wait_reboot(session, camera):
-                                                raise ValueError("Reset後の復帰未確認")
+                                                raise ValueError('Reboot recovery unverified')
                                             self.store.update(identity, results={"preparation": "OK"})
                                         verified = await engine.get_camera_info(session, ip)
                                         if not verified or flow.mac(verified.mac) != identity or verified.sn != camera.sn:
-                                            raise ValueError("作業IPのMAC/SNを確認できません")
+                                            raise ValueError('Work IP MAC/SN unverified')
                                         self.store.update(identity, step="RTSP", status="TESTING")
                                         engine.event_queue.put(("camera_ready", camera))
                                     while identity in self.approved and not engine.APP_STOP.is_set():
@@ -680,7 +681,7 @@ class BrowserInspection(engine.InspectionUI):
                                     self.approved.discard(identity)
                                     self.workflow_events.put(("onboarding_failed", (camera, str(error))))
                                 finally:
-                                    console_log(f"[Camera Task 解除] MAC={identity}")
+                                    console_log(f'[Camera Task released] MAC={identity}')
                             tasks[identity] = asyncio.create_task(monitor())
                             generations[identity] = self.task_generation.get(identity, 0)
                     for identity, task in list(tasks.items()):
@@ -725,10 +726,10 @@ class BrowserInspection(engine.InspectionUI):
         self.store.update(camera.mac, new_ip=target, step="STICKER", status="TESTING")
         for panel in self.panels:
             if panel.processing_camera and flow.mac(panel.processing_camera.mac) == flow.mac(camera.mac):
-                panel.video.config(text="ラベルを貼ってください", fg=engine.COLOR_BLUE)
-                panel.status.config(text="ラベル貼付待ち")
-                panel.status_detail.config(text=f"このカメラの目標IP: {target}\n貼付後に「貼付完了」を押してください")
-                panel.ok.config(text="貼付完了 · IP変更", state="normal")
+                panel.video.config(text='Attach the label', fg=engine.COLOR_BLUE)
+                panel.status.config(text='Waiting for label confirmation')
+                panel.status_detail.config(text=f'Target IP for this camera: {target}\nAfter attaching the label, press Label attached')
+                panel.ok.config(text='Label attached - change IP', state="normal")
                 panel.ng.config(state="disabled")
         self.update_counter()
 
@@ -736,20 +737,20 @@ class BrowserInspection(engine.InspectionUI):
         camera, target = job["camera"], job["target"]
         device_mac = flow.mac(camera.mac)
         if job["state"] != "sticker":
-            raise ValueError("IP変更処理中です")
+            raise ValueError('IP change in progress')
         config = flow.network_config(self.settings, self.selected_interface())
         # MAC identity and destination occupancy are checked again at the moment of confirmation.
         def change():
             try:
                 if not self.link.arp(camera.ip, device_mac):
-                    raise ValueError("作業IPで対象MACを確認できません。IP未変更")
+                    raise ValueError('Target MAC not verified at work IP. IP unchanged')
                 occupied = self.link.arp(target)
                 if any(found != device_mac for found in occupied):
-                    raise ValueError("目標IPが他の機器に使用されています。IP未変更")
+                    raise ValueError('Target IP is occupied by another device. IP unchanged')
                 self.journal.transition(device_mac, "changing")
                 self.link.set_ip(device_mac, target, config["mask"], config["gateway"], self.camera_credentials.get(device_mac, engine.step3.VERIFY_CREDENTIALS))
                 if not self.link.wait_ip(device_mac, target):
-                    raise ValueError("最終MAC/IP未確認。IP変更再送なし")
+                    raise ValueError('Final MAC/IP unverified. No repeated IP change')
                 self.journal.transition(device_mac, "confirmed")
                 self.workflow_events.put(("final_ok", camera))
                 misses = 0
@@ -775,7 +776,7 @@ class BrowserInspection(engine.InspectionUI):
             if panel.processing_camera and flow.mac(panel.processing_camera.mac) == flow.mac(camera.mac):
                 panel.ok.config(state="disabled")
                 panel.video.config(text="RUNING")
-                panel.status_detail.config(text=f"IP変更・MAC確認 → {target}")
+                panel.status_detail.config(text=f'IP change and MAC verification -> {target}')
         threading.Thread(target=change, daemon=True).start()
 
     def refresh_shortcut_labels(self):
@@ -784,12 +785,12 @@ class BrowserInspection(engine.InspectionUI):
             if panel.processing_camera:
                 job = self.jobs.get(flow.mac(panel.processing_camera.mac))
                 if job and job["state"] == "sticker":
-                    panel.ok.config(text="貼付完了 · IP変更", state="normal")
+                    panel.ok.config(text='Label attached - change IP', state="normal")
             if panel.camera and panel.exterior_done:
                 check = self.ir_checks.get(flow.mac(panel.camera.mac))
                 if check:
-                    panel.ok.config(text='OK · config書込へ', state='normal' if check.stage == 'PURPLE' else 'disabled')
-                    panel.ng.config(text=('RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG' if check.stage == 'PURPLE' else 'IR-CUT / 光センサー NG') + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
+                    panel.ok.config(text='OK - import config', state='normal' if check.stage == 'PURPLE' else 'disabled')
+                    panel.ng.config(text=('RTSP NG' if check.stage == 'COVER' else 'IR-CUT NG' if check.stage == 'PURPLE' else 'IR-CUT / light sensor NG') + (' [Esc]' if self.mode_count == 1 and panel.ng.cget('state') == 'normal' else ''))
 
     def watch_removal(self, camera, ip, event="ng_disconnected", discover=False):
         identity = flow.mac(camera.mac)
@@ -811,7 +812,7 @@ class BrowserInspection(engine.InspectionUI):
                             return
                     except Exception as error:
                         misses = 0
-                        console_log(f"[MAC監視] MAC={identity} {error}")
+                        console_log(f'[MAC monitor] MAC={identity} {error}')
                     time.sleep(1)
             finally:
                 self.removal_watchers.discard(identity)
@@ -844,7 +845,7 @@ class BrowserInspection(engine.InspectionUI):
                     self.discovery_current = value or []
                 if kind == "discovery_error":
                     self.discovery_error = value
-                    self.log("[ネットワーク Error] " + value)
+                    self.log('[Network Error]' + value)
                 if self.flow_started:
                     self.root.after(3000, self.device_scan)
             elif kind == "reserve_slot":
@@ -924,8 +925,8 @@ class BrowserInspection(engine.InspectionUI):
                         int(self.settings.get("target_next", 220)))
                     if next_number is not None:
                         self.persist_settings({"target_next": next_number})
-                        console_log(f"[連番] OKカウント · 次の開始IP={self.settings.get('target_prefix', '192.168.0')}.{next_number}")
-                engine.save_result(camera, "OK", "最終MAC/IP確認 " + job["target"])
+                        console_log(f'[Sequence] OK counted - next starting IP={self.settings.get('target_prefix', '192.168.0')}.{next_number}')
+                engine.save_result(camera, "OK", 'Final MAC/IP verified' + job["target"])
                 for panel in self.panels:
                     if panel.processing_camera and flow.mac(panel.processing_camera.mac) == flow.mac(camera.mac):
                         panel.show_result("OK", camera)
@@ -933,14 +934,14 @@ class BrowserInspection(engine.InspectionUI):
                         panel.last_camera = camera
                         panel.ok.config(state="disabled")
                         panel.ng.config(state="disabled")
-                        panel.video.config(text="OK\n電源を切ってください")
-                        panel.status_detail.config(text="MAC一致 · " + job["target"])
-                self.header_status.config(text="● 完了 · 断電待ち")
+                        panel.video.config(text='OK\nTurn off power')
+                        panel.status_detail.config(text='MAC matched -' + job["target"])
+                self.header_status.config(text='Completed - waiting for power off')
             elif kind == "watch_error":
                 camera, detail = value
                 for panel in self.panels:
                     if panel.processing_camera and flow.mac(panel.processing_camera.mac) == flow.mac(camera.mac):
-                        panel.status_detail.config(text="MAC監視を再確認中 · " + detail)
+                        panel.status_detail.config(text='Rechecking MAC monitoring -' + detail)
             elif kind == "ng_disconnected":
                 self.ir_checks.pop(flow.mac(value.mac), None)
                 self.ir_frame_times.pop(flow.mac(value.mac), None)
@@ -948,7 +949,7 @@ class BrowserInspection(engine.InspectionUI):
                 if record.get("status") == "ERROR":
                     self.store.finish(value.mac, "ERROR", record.get("error", ""))
                 self.journal.release_work(value.mac)
-                console_log(f"[MAC保護 解除] MAC={value.mac} 断電確認")
+                console_log(f'[MAC protection released] MAC={value.mac} power off verified')
                 self.working.pop(flow.mac(value.mac), None)
                 self.approved.discard(flow.mac(value.mac))
                 for panel in self.panels:
@@ -959,7 +960,7 @@ class BrowserInspection(engine.InspectionUI):
                 self.ir_checks.pop(flow.mac(camera.mac), None)
                 self.ir_frame_times.pop(flow.mac(camera.mac), None)
                 self.journal.release_work(camera.mac)
-                console_log(f"[MAC保護 解除] MAC={camera.mac} 断電確認")
+                console_log(f'[MAC protection released] MAC={camera.mac} power off verified')
                 self.working.pop(flow.mac(camera.mac), None)
                 self.approved.discard(flow.mac(camera.mac))
                 identity = flow.mac(camera.mac)
@@ -968,7 +969,7 @@ class BrowserInspection(engine.InspectionUI):
                 for panel in self.panels:
                     if panel.processing_camera and flow.mac(panel.processing_camera.mac) == flow.mac(camera.mac):
                         panel.finish()
-                        panel.show_message("取外し確認\n次のカメラ待ち")
+                        panel.show_message('Disconnection verified\nWaiting for the next camera')
         super().poll()
         self.poll_ir_cut()
         for panel in self.panels[:self.mode_count]:
@@ -992,7 +993,7 @@ class BrowserInspection(engine.InspectionUI):
                     self.scan_started = False
                 except PermissionError as error:
                     self.store.save_error = str(error)
-                    console_log("[履歴保存待ち] " + str(error))
+                    console_log('[History save pending]' + str(error))
 
     def scan_usb(self):
         if self.demo or self.usb_search_stopped or self.usb_cycle_active or self.usb_scanning:
@@ -1000,7 +1001,7 @@ class BrowserInspection(engine.InspectionUI):
         self.usb_cycle_active = True
         self.usb_scanning = True
         self.usb_scan_time = time.monotonic()
-        self.usb_label.config(text="USB Cameraを検索中...")
+        self.usb_label.config(text='Searching USB cameras...')
         def search():
             try:
                 self.usb_auto_events.put((True, engine.exterior.list_usb_camera_devices()))
@@ -1011,7 +1012,7 @@ class BrowserInspection(engine.InspectionUI):
     def connect_usb(self):
         index = int(self.usb_entry.get())
         if index not in self.usb_devices:
-            raise ValueError("USB Cameraを再検索してください")
+            raise ValueError('Rescan USB cameras')
         preferred = [(index, self.usb_devices[index])]
         self.usb_candidates = preferred + [(i, name) for i, name in self.usb_devices.items() if i != index and "virtual" not in name.lower()]
         self.usb_candidate_position = 0
@@ -1028,7 +1029,7 @@ class BrowserInspection(engine.InspectionUI):
             self.usb_cycle_active = False
             self.usb_search_stopped = True
             self.usb_selected = None
-            self.usb_label.config(text="USB未接続 · 全候補を確認して停止")
+            self.usb_label.config(text='USB disconnected - stopped after checking all candidates')
             return
         index, name = self.usb_candidates[self.usb_candidate_position]
         self.usb_candidate_position += 1
@@ -1037,7 +1038,7 @@ class BrowserInspection(engine.InspectionUI):
         self.usb_attempt_time = time.monotonic()
         self.usb_reader = engine.exterior.InspectionUSBReader(index, name, retry=False)
         self.usb_reader.start()
-        self.usb_label.config(text=f"USB接続確認 {self.usb_candidate_position}/{len(self.usb_candidates)} · {name}")
+        self.usb_label.config(text=f'USB connection verification {self.usb_candidate_position}/{len(self.usb_candidates)} · {name}')
 
     def poll_usb_auto(self):
         try:
@@ -1049,7 +1050,7 @@ class BrowserInspection(engine.InspectionUI):
             if not success:
                 self.usb_cycle_active = False
                 self.usb_search_stopped = True
-                self.usb_label.config(text="USB検索停止 · " + devices)
+                self.usb_label.config(text='USB discovery stopped -' + devices)
                 return
             self.usb_cycle_active = True
             self.usb_devices = dict(devices)
@@ -1065,7 +1066,7 @@ class BrowserInspection(engine.InspectionUI):
             if not self.usb_connection_seen:
                 self.usb_connection_seen = True
                 self.persist_settings({"usb_index": self.usb_selected, "usb_name": self.usb_devices.get(self.usb_selected)})
-                self.usb_label.config(text="USB接続済み · " + self.usb_devices.get(self.usb_selected, ""))
+                self.usb_label.config(text='USB connected -' + self.usb_devices.get(self.usb_selected, ""))
             return
         done = getattr(self.usb_reader, "done_event", None)
         if self.usb_connection_seen:
@@ -1082,7 +1083,7 @@ class BrowserInspection(engine.InspectionUI):
             else:
                 self.usb_cycle_active = False
                 self.usb_search_stopped = True
-                self.usb_label.config(text="USB検索停止 · カメラ応答タイムアウト")
+                self.usb_label.config(text='USB discovery stopped - camera response timeout')
 
     def scan_network(self):
         if not self.demo:
@@ -1094,33 +1095,33 @@ class BrowserInspection(engine.InspectionUI):
 
     def begin_ng(self, index):
         if self.ng_preview_open:
-            raise ValueError("NG確認画面を閉じてください。")
+            raise ValueError('Close the NG confirmation window.')
         panel = self.panels[index]
         if panel.camera and panel.exterior_done:
             identity = flow.mac(panel.camera.mac)
             check = self.ir_checks.get(identity)
             stage = check.stage if check else 'COVER'
             key = 'rtsp' if stage == 'COVER' else 'ir_cut' if stage == 'PURPLE' else 'light_sensor'
-            reason = {'rtsp': 'RTSP不具合', 'light_sensor': 'IR-CUT / 光センサー不具合', 'ir_cut': 'IR-CUT不具合'}[key]
+            reason = {'rtsp': 'RTSP defect', 'light_sensor': 'IR-CUT / light sensor defect', 'ir_cut': 'IR-CUT defect'}[key]
             self.finish_ng_direct(panel, 'E1' if key == 'rtsp' else 'E2', reason, key)
             return
         if panel.camera is None:
-            raise ValueError("カメラがありません。")
+            raise ValueError('No camera available.')
         exterior = not panel.exterior_done
         if exterior:
             if self.usb_owner != index or self.usb_reader is None:
-                raise ValueError("USB外観確認待ちです。")
+                raise ValueError('Waiting for USB appearance inspection.')
             image = self.usb_reader.snapshot()
         else:
             if panel.reader is None:
-                raise ValueError("映像確認待ちです。")
+                raise ValueError('Waiting for video verification.')
             image = panel.reader.snapshot()
         if image is None and exterior:
-            raise ValueError("USB映像がありません。")
+            raise ValueError('No USB image available.')
         connection_failure = image is None
         if connection_failure:
             image = engine.exterior.evidence_store.connection_failure_image(
-                panel.camera, getattr(panel.reader, "last_status", "RTSP映像なし"))
+                panel.camera, getattr(panel.reader, "last_status", 'No RTSP frames'))
         self.preview = {"index": index, "camera": panel.camera, "image": image.copy(),
                         "exterior": exterior, "connection_failure": connection_failure}
         self.ng_preview_open = True
@@ -1129,42 +1130,43 @@ class BrowserInspection(engine.InspectionUI):
     def complete_ng(self, category, reason, boxes, discard=False):
         preview = self.preview
         if preview is None:
-            raise ValueError("NG画像がありません。")
+            raise ValueError('No NG image available.')
         index, camera, image = preview["index"], preview["camera"], preview["image"]
         panel = self.panels[index]
         if panel.camera is not camera:
-            raise ValueError("検査対象が変更されました。")
+            raise ValueError('Inspection target changed.')
         if preview["exterior"]:
             if not boxes:
-                raise ValueError("問題箇所を囲んでください。")
+                raise ValueError('Draw a box around the affected area.')
             output = image.copy()
             draw = ImageDraw.Draw(output)
             for box in boxes:
                 if len(box) != 4 or any(not isinstance(v, (int, float)) for v in box):
-                    raise ValueError("画枠が不正です。")
+                    raise ValueError('Invalid annotation box.')
                 x1, y1, x2, y2 = box
                 if not (0 <= x1 < x2 <= image.width and 0 <= y1 < y2 <= image.height):
-                    raise ValueError("画枠が画像範囲外です。")
+                    raise ValueError('Annotation box is outside the image.')
                 draw.rectangle(box, outline="red", width=max(2, image.width // 300))
             if category not in ('B', 'D'):
-                raise ValueError('外観不具合 または 破損 を選択してください')
-            appearance_reason = '外観不具合' if category == 'B' else '破損'
+                raise ValueError('Select appearance defect or damage')
+            appearance_reason = 'Appearance defect' if category == 'B' else 'Damage'
             path = self.save_evidence(camera, output, 'B')
             self.store.update(camera.mac, results={"appearance": "NG", "appearance_category": appearance_reason}, step="PREPARE")
-            engine.save_result(camera, "外観NG", "-", ng_reason=appearance_reason, evidence_path=path)
+            engine.save_result(camera, 'Appearance NG', "-", ng_reason=appearance_reason, evidence_path=path)
             self.complete_exterior(index, "NG")
         else:
             if preview["connection_failure"]:
-                category, reason = "E1", "RTSP接続不可"
+                category, reason = "E1", 'RTSP unavailable'
             elif category == "E2":
-                reason = "IR-CUT不具合"
+                reason = 'IR-CUT defect'
             elif category == "Z" and str(reason).strip():
                 reason = str(reason).strip()
             else:
-                raise ValueError("NG分類と理由を確認してください。")
+                raise ValueError('Check NG category and reason.')
             path = "" if discard else self.save_evidence(camera, image, category)
             if category == 'E2':
                 self.store.update(camera.mac, results={'ir_cut': 'NG'})
+            self.store.update(camera.mac, ng_reason_code={"E1": "RTSP_FAILURE", "E2": "IR_CUT_PURPLE_DEFECT", "Z": "OTHER_FAILURE"}.get(category, "OTHER_FAILURE"))
             self.store.finish(camera.mac, "NG", reason)
             engine.save_result(camera, "NG", "-", ng_reason=reason, evidence_path=path)
             engine.mark_completed(camera.sn)
@@ -1180,11 +1182,11 @@ class BrowserInspection(engine.InspectionUI):
 
     def post_records(self, test=False):
         if self.post_busy:
-            raise ValueError("POST送信中です")
+            raise ValueError('POST in progress')
         url = self.settings.get("post_url", "")
         if not url:
             self.post_last_attempt = time.monotonic()
-            raise ValueError("設定でPOST URLを保存してください")
+            raise ValueError('Save a POST URL in settings')
         gas_post.validate_url(url)
         self.post_busy = True
         self.post_last_attempt = time.monotonic()
@@ -1196,7 +1198,7 @@ class BrowserInspection(engine.InspectionUI):
                     payload["type"] = "camera_result"
                     received = gas_post.send(url, payload)
                     self.post_response = received
-                    console_log(f"[GAS応答] record_id={row['record_id']} {json.dumps(received, ensure_ascii=False)}")
+                    console_log(f'[GAS response] record_id={row['record_id']} {json.dumps(received, ensure_ascii=False)}')
                     return received
                 if test:
                     payload = {"type": "test", "record_id": "test-" + secrets.token_hex(8), "message": "ITC Camera Inspection connection test"}
@@ -1206,7 +1208,7 @@ class BrowserInspection(engine.InspectionUI):
                     data = json.loads((self.store.root / "pending_post.json").read_text(encoding="utf-8"))
                     pending = [row for row in data["records"] if row["status"] != "SENT"]
                     if pending:
-                        self.post_error = pending[-1].get("last_error", "送信待ち")
+                        self.post_error = pending[-1].get("last_error", 'Waiting to send')
                         self.post_response = pending[-1].get("last_response")
             except Exception as error:
                 self.post_error = str(error)
@@ -1219,16 +1221,16 @@ class BrowserInspection(engine.InspectionUI):
     def command(self, body):
         action = body.get("action")
         if self.demo and action not in ("select", "mode", "debug", "close", "cancel_ng"):
-            raise ValueError("デモ表示中のため実機操作はできません。")
+            raise ValueError('Hardware operations are disabled in demo mode.')
         if action == "post_settings":
             url = str(body.get("url", "")).strip()
             enabled = body.get("enabled") is True
             if url:
                 gas_post.validate_url(url)
             elif enabled:
-                raise ValueError("POST URLを入力してください")
+                raise ValueError('Enter a POST URL')
             if not self.persist_settings({"post_url": url, "post_enabled": enabled}):
-                raise ValueError("POST設定保存失敗")
+                raise ValueError('POST settings save failed')
             self.post_last_attempt = 0
         elif action in ("post_retry", "post_test"):
             self.post_records(test=action == "post_test")
@@ -1237,10 +1239,10 @@ class BrowserInspection(engine.InspectionUI):
             if action == "clear_counters":
                 self.ok_count = self.ng_count = 0
                 self.update_counter()
-            console_log("[起動通知] 確認 · カメラ操作なし" if action == "startup_continue" else "[計数] OK/NG表示をクリア · 履歴とMAC保護は保持")
+            console_log('[Startup notice] Acknowledged; no camera operations' if action == "startup_continue" else '[Counters] Cleared display counts; history and MAC protection retained')
         elif action == "job_resume":
             if not self.recovery_pending:
-                raise ValueError("再開する作業がありません")
+                raise ValueError('No job available to resume')
             job = self.store.job
             self.persist_settings({"carton": job["carton"], "display_mode": job["mode"],
                 "work_prefix": job["base_ip"].rsplit(".", 1)[0],
@@ -1262,34 +1264,34 @@ class BrowserInspection(engine.InspectionUI):
                     self.watch_removal(camera, record["new_ip"], discover=True)
         elif action == "job_new":
             if self.flow_started:
-                raise ValueError("実行中は新しい作業へ変更できません")
+                raise ValueError('Cannot switch jobs while running')
             self.store.archive("incomplete")
             self.journal.begin_job()
             self.recovery_pending = False
-            console_log("[Job] 前回作業をhistoryへ保存。新規作業待機")
+            console_log('[Job] Archived previous job; waiting for a new job')
         elif action == "job_setup":
             if self.flow_started:
-                raise ValueError("検査開始前にCartonとBase IPを設定してください")
+                raise ValueError('Configure carton and Base IP before starting inspection')
             import ipaddress
             base_ip = str(ipaddress.IPv4Address(body.get("base_ip", "")))
             carton = str(body.get("carton", "")).strip()
             if not __import__('re').fullmatch(r"[0-9A-Za-z_-]{1,32}", carton):
-                raise ValueError("Carton番号を入力してください")
+                raise ValueError('Enter a carton number')
             start = int(base_ip.rsplit(".", 1)[1])
             if start + self.mode_count - 1 > 254 or start < 1:
-                raise ValueError("Base IPから台数分の連続IPを確保できません")
+                raise ValueError('Cannot reserve consecutive work IPs from Base IP')
             maximum = int(body.get("carton_max", 12))
             if maximum < 1:
-                raise ValueError("Carton最大台数は1以上")
+                raise ValueError('Carton limit must be at least 1')
             if not self.persist_settings({"carton": carton, "carton_max": maximum,
                 "work_prefix": base_ip.rsplit(".", 1)[0], "work_start": start,
                 "work_end": start + self.mode_count - 1}):
-                raise ValueError("作業設定の保存失敗")
+                raise ValueError('Job settings save failed')
         elif action == 'rekit_device':
             identity = flow.mac(body['mac'])
             if identity in self.config_running or identity in self.onboarding or self.jobs.get(identity, {}).get('state') in ('sticker', 'changing') or any(
                     p.camera and flow.mac(p.camera.mac) == identity for p in self.panels):
-                raise ValueError('このMACは検査中です。終了後に再Kittingしてください')
+                raise ValueError('This MAC is under inspection. Rekit after completion')
             self.store.forget_device(identity)
             self.journal.forget_device(identity)
             self.approved.discard(identity)
@@ -1300,18 +1302,18 @@ class BrowserInspection(engine.InspectionUI):
             self.rtsp_counts.pop(identity, None)
             self.rtsp_started.pop(identity, None)
             self.task_generation[identity] = self.task_generation.get(identity, 0) + 1
-            console_log(f'[再Kitting] MAC={identity} キャッシュ解除 · 履歴保持')
+            console_log(f'[Rekit] MAC={identity} cache released - history retained')
             self.device_scan()
         elif action == "config_confirmed":
             identity = flow.mac(body["mac"])
             if identity in self.config_running or identity in self.onboarding:
-                raise ValueError("このMACの処理は実行中です")
+                raise ValueError('This MAC is being processed')
             self.store.update(identity, config_uncertain=False, results={"settings": "OK"})
             self.command({"action": "retry_device", "mac": identity})
         elif action == "retry_device":
             identity = flow.mac(body["mac"])
             if identity in self.onboarding or identity in self.config_running:
-                raise ValueError("このMACの処理は実行中です")
+                raise ValueError('This MAC is being processed')
             self.task_generation[identity] = self.task_generation.get(identity, 0) + 1
             self.ir_checks.pop(identity, None)
             self.config_dispatched.discard(identity)
@@ -1332,15 +1334,15 @@ class BrowserInspection(engine.InspectionUI):
             self.device_scan()
         elif action == "start":
             if self.demo:
-                raise ValueError("デモ表示中です。")
+                raise ValueError('Demo mode.')
             if not self.settings.get("network_id"):
-                raise ValueError("設定でMAC/IP確認用のネットワーク接続を選択してください。")
+                raise ValueError('Select the MAC/IP verification adapter in settings.')
             self.resuming = bool(self.store.job)
             self.start_workflow()
         elif action in ("select", "ok", "ng"):
             index = int(body.get("index", 0))
             if not 0 <= index < self.mode_count:
-                raise ValueError("カメラ番号が不正です。")
+                raise ValueError('Invalid camera number.')
             self.select_panel(index)
             if action == "ok" and self.panels[index].processing_camera:
                 job = self.jobs.get(flow.mac(self.panels[index].processing_camera.mac))
@@ -1349,10 +1351,10 @@ class BrowserInspection(engine.InspectionUI):
                     return
             if action != "select":
                 if self.ng_preview_open:
-                    raise ValueError("NG確認画面を閉じてください。")
+                    raise ValueError('Close the NG confirmation window.')
                 button = self.panels[index].ok if action == "ok" else self.panels[index].ng
                 if button.cget("state") != "normal":
-                    raise ValueError("この操作はまだ使用できません。")
+                    raise ValueError('This action is not available yet.')
                 if action == "ok":
                     self.mark_ok(index)
                 else:
@@ -1360,9 +1362,9 @@ class BrowserInspection(engine.InspectionUI):
         elif action == "mode":
             count = int(body["count"])
             if count not in (1, 2, 4, 6):
-                raise ValueError("表示台数が不正です。")
+                raise ValueError('Invalid panel count.')
             if self.flow_started and count != self.mode_count:
-                raise ValueError("作業モードは検査開始前に変更してください")
+                raise ValueError('Change work mode before starting inspection')
             self.mode_var.set(count)
             self.change_mode()
         elif action == "cancel_ng":
@@ -1376,11 +1378,11 @@ class BrowserInspection(engine.InspectionUI):
             self.scan_network()
         elif action == "usb_scan":
             if self.usb_scanning:
-                raise ValueError("USB Camera検索中です。完了までお待ちください。")
+                raise ValueError('USB discovery in progress. Wait for completion.')
             if self.usb_reader is not None:
                 done = getattr(self.usb_reader, "done_event", None)
                 if self.usb_search_stopped and done is not None and not done.is_set():
-                    raise ValueError("前のUSBカメラが応答待ちです。カメラを抜き差ししてから再試行してください。")
+                    raise ValueError('Previous USB camera is still waiting. Reconnect it before retrying.')
                 self.usb_reader.stop()
                 self.usb_reader = None
             self.usb_search_stopped = False
@@ -1389,69 +1391,71 @@ class BrowserInspection(engine.InspectionUI):
             self.scan_usb()
         elif action == "target_next":
             if self.flow_started or any(p.processing_camera for p in self.panels):
-                raise ValueError("開始IPは検査開始前に設定してください")
+                raise ValueError('Set starting IP before inspection')
             value = int(body.get("value", 0))
             if not int(self.settings.get("target_start", 215)) <= value <= int(self.settings.get("target_end", 254)):
-                raise ValueError("開始IPは目標IP範囲内で指定してください")
+                raise ValueError('Starting IP must be within the target range')
             if not self.persist_settings({"target_next": value}):
-                raise ValueError("開始IPの保存失敗")
+                raise ValueError('Starting IP save failed')
         elif action == "settings":
             network = body.get("network", "")
             if not network or network not in [item["id"] for item in self.settings.get("network_interfaces", [])]:
-                raise ValueError("MAC/IP確認に使用するネットワーク接続を選択してください。")
+                raise ValueError('Select a network adapter for MAC/IP verification.')
             start = int(body.get("start", self.start_entry.get()))
             end = int(body.get("end", self.end_entry.get()))
             if not 0 <= start <= end <= 255:
-                raise ValueError("IP範囲は0～255、開始IP≤終了IPで設定してください。")
+                raise ValueError('IP range must be 0-255 and start must not exceed end.')
             mode = int(body.get("mode", self.mode_count))
             stream = body.get("stream", engine.RTSP_PATH)
             if mode not in (1, 2, 4, 6) or stream not in ("/main", "/sub"):
-                raise ValueError("表示モード・ストリームが不正です。")
+                raise ValueError('Invalid display mode or stream.')
             if self.scan_started and (start != int(self.start_entry.get()) or end != int(self.end_entry.get()) or stream != engine.RTSP_PATH):
-                raise ValueError("検索開始後のIP範囲・ストリーム変更は、再起動後に行ってください。")
+                raise ValueError('Restart before changing the scan range or stream.')
             if any(p.camera or p.processing_camera for p in self.panels[mode:]):
-                raise ValueError("カメラ2～4の検査完了後に1台表示へ変更してください。")
+                raise ValueError('Finish cameras 2-4 before switching to single-panel mode.')
             if network != self.settings.get("network_id") and (self.flow_started or any(p.processing_camera for p in self.panels)):
-                raise ValueError("検査中はネットワークを変更できません。再起動後に変更してください。")
+                raise ValueError('Cannot change adapter during inspection. Restart before changing it.')
             usb = body.get("usb")
             if usb is not None and int(usb) not in self.usb_devices:
-                raise ValueError("USB Cameraを再検索してください。")
+                raise ValueError('Rescan USB cameras.')
             interface = next(item for item in self.settings["network_interfaces"] if item["id"] == network)
             extended = {key: body.get(key, self.settings.get(key)) for key in (
                 "work_prefix", "work_start", "work_end", "target_prefix", "target_start", "target_end", "target_next",
                 "target_mask", "target_gateway", "allowed_models", "access_username", "access_password",
-                "after_config_username", "after_config_password", "config_import_password", "post_url", "post_enabled") if body.get(key, self.settings.get(key)) is not None}
+                "after_config_username", "after_config_password", "config_import_password", "post_url", "post_enabled", "ui_language") if body.get(key, self.settings.get(key)) is not None}
+            if extended.get('ui_language', 'en') not in ('en', 'ja'):
+                raise ValueError('Unsupported UI language')
             if extended.get("post_url"):
                 extended["post_url"] = gas_post.validate_url(str(extended["post_url"]).strip())
             if extended.get("post_enabled") and not extended.get("post_url"):
-                raise ValueError("POST URLを入力してください")
+                raise ValueError('Enter a POST URL')
             if "config_import_password" in extended and (not isinstance(extended["config_import_password"], str) or
                     not extended["config_import_password"] or "\x00" in extended["config_import_password"]):
-                raise ValueError("configファイルの導入パスワードを入力してください")
+                raise ValueError('Enter the config import password')
             for key in ("access_username", "access_password", "after_config_username", "after_config_password"):
                 if key in extended and (not isinstance(extended[key], str) or not extended[key] or
                                         any(c in extended[key] for c in (";", "\r", "\n", "\x00"))):
-                    raise ValueError("アクセス認証を入力してください（セミコロン・改行は使用不可）")
+                    raise ValueError('Enter access credentials (no semicolons or line breaks)')
             if any(p.processing_camera for p in self.panels) and any(
                     key in extended and self.settings.get(key) != extended[key] for key in
                     ("access_username", "access_password", "after_config_username", "after_config_password", "config_import_password")):
-                raise ValueError("カメラ検査中はアクセス認証を変更できません")
+                raise ValueError('Cannot change credentials during inspection')
             if "allowed_models" in extended:
                 known_models = {model for item in self.journal.data["devices"].values() for model in flow.device_models(item)}
                 known_models.update(self.settings.get("allowed_models", []))
                 if not isinstance(extended["allowed_models"], list) or any(model not in known_models for model in extended["allowed_models"]):
-                    raise ValueError("検出済みのモデルから許可するモデルを選択してください")
+                    raise ValueError('Select allowed models from discovered devices')
             proposed = {**self.settings, **extended}
             if any(key.startswith("target_") or key.startswith("work_") for key in extended):
                 flow.network_config(proposed, interface)
             if self.flow_started and any(self.settings.get(key) != value for key, value in extended.items() if key not in ("post_url", "post_enabled")):
-                raise ValueError("検査開始後のネットワーク割当条件は変更できません")
+                raise ValueError('Cannot change network allocation conditions after starting inspection')
             changes = {**extended, "network_id": network, "scan_start": start, "scan_end": end,
                        "display_mode": mode, "rtsp_path": stream}
             if usb is not None:
                 changes.update(usb_index=int(usb), usb_name=self.usb_devices[int(usb)])
             if not self.persist_settings(changes):
-                raise ValueError("設定保存失敗")
+                raise ValueError('Settings save failed')
             self.apply_access_settings()
             self.update_network_label()
             for widget, value in ((self.start_entry, start), (self.end_entry, end)):
@@ -1471,7 +1475,7 @@ class BrowserInspection(engine.InspectionUI):
         elif action == "close":
             self.close()
         else:
-            raise ValueError("不明な操作です。")
+            raise ValueError('Unknown action.')
         self.refresh_shortcut_labels()
 
     def snapshot(self):
