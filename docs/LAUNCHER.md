@@ -2,6 +2,10 @@
 
 ## EXEを使用しない起動
 
+標準入口は`start.pyw`です。PythonのGUI起動器 → GitHub更新 → bootstrap → 本地検査ウィンドウの順に実行し、独自EXEやCUIウィンドウは使用しません。`.pyw`はインストール済みPythonの`pythonw.exe`に関連付けてください。関連付けがないPCでは、下記の`start.vbs`を補助入口として使用できます。
+
+Python本体とNpcapは各PCにインストールしてください。検査設定・config・履歴・画像は更新対象外です。ログはUTF-8で保存します。`pythonw.exe start.pyw --self-test`は更新・カメラ操作なしで起動器を確認します。
+
 `start.vbs`をダブルクリックしてください。インストール済みのPythonで更新ウィンドウを開き、GitHub更新後に検査ウィンドウを起動します。独自のEXEは使用せず、コンソールも表示しません。Windowsのセキュリティ設定は変更しません。スクリプトやPython自体が管理ポリシーで禁止されているPCでは、管理者の許可が必要です。
 
 Python 3.9以降、Tk、Npcapが必要です。起動器はPyYAMLとrequestsを確認し、不足時にpipでインストールします。検査用ライブラリは従来のbootstrapで確認します。

@@ -18,7 +18,7 @@ config file/  Camera config (private)
 
 ## Start
 
-Use `start.vbs` from `release/ITC-C80-Script-Launcher.zip`. It uses installed Python and does not invoke the custom packaged EXE. No console or browser is opened. The launcher finds the project root and starts `src/bootstrap.py` after checking updates. Camera operations need Python 3.9+ and Npcap. Configure credentials and network settings in the application; put the camera config in `config file/`. Existing production folders remain at the project root. If Python cannot be found, specify its executable in UTF-8 `python_path.txt` beside `start.vbs`.
+Double-click `start.pyw` from `release/ITC-C80-Script-Launcher.zip`. The entire startup/update/UI chain uses installed Python, without a custom EXE or console. The Python GUI updater downloads and verifies GitHub assets, then starts the native inspection window through `src/bootstrap.py`. Python 3.9+ with Tk and Npcap are required. Associate `.pyw` with your installed Python's `pythonw.exe` if needed. Configure credentials and network settings in the application; put the camera config in `config file/`. Existing production folders remain at the project root. `start.vbs` remains an optional compatibility entry point when Windows has no `.pyw` association.
 
 Copy `examples/launcher_settings.yaml` to `launcher_settings.yaml` if needed.
 

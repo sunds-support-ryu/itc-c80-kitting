@@ -11,7 +11,7 @@ def build():
     destination = root / 'release' / 'ITC-C80-Script-Launcher.zip'
     destination.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED) as bundle:
-        for relative in sorted(MANAGED | {'start.vbs'}):
+        for relative in sorted(MANAGED | {'start.pyw', 'start.vbs'}):
             bundle.write(root / relative, relative)
         bundle.write(root / 'examples' / 'launcher_settings.yaml', 'launcher_settings.yaml')
     print(destination)
