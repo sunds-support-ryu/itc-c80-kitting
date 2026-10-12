@@ -28,7 +28,7 @@ Source contracts only. This report does not establish actual device behavior.
 - The independent runner selects one authentication scheme, does not warm up the root page, and sends one CGI only.
 - Current app performs a multi-step import-status/identity workflow. These probes deliberately do not orchestrate it.
 - Legacy RSA/AES parameters match the current and legacy Python algorithms; marker acceptance is not verified application.
-- ITEC/change_ip.py treats some timeouts/JSON errors as success. Probes retain unknown outcome; L2 MAC SET is a different protocol.
+- ITEC/legacy/itec/change_ip.py treats some timeouts/JSON errors as success. Probes retain unknown outcome; L2 MAC SET is a different protocol.
 - Reset option=2 behavior, post-config account changes and supported model-specific candidates require physical testing.
 - Current IR-CUT testing analyzes RTSP frames; it does not send a dedicated IR-CUT CGI.
 - Files referenced outside the Python workspace are provenance only, not read or validated by this comparison.

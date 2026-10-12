@@ -9,8 +9,8 @@
       "effects": "read",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "5f7fd42c4b4902601d86a0e7ba73f09da14386635e12c451b909767a8fad0b8d",
-      "reference_sha256": "043c82691db34b6892d53d93aa203b5d8775003f8e8b8e60be55f8560adc0201",
+      "local_sha256": "0c1a7bb95131fa96287ddf4cc546a439c418bbd44b3db1039fdafb84cc556386",
+      "reference_sha256": "28d77a6aa31bb8cfe86f9cc26d9438888600f0841480abd7727b8255063ce5b6",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -22,8 +22,8 @@
       "effects": "reset",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "6061e031d684c0ff4595a1e5613587dddaf71a2a97851e47ff72292c47e26bdf",
-      "reference_sha256": "7ffbc5d8a9a7795762b1a7bfe19e49bc1da50359eec5391069912c22ae2f50a7",
+      "local_sha256": "4692d72d487663f55276b92b16b42caffb4669abe3f36d08622028bf9a39262e",
+      "reference_sha256": "3ba0d77ef888d396df05acb287f7750a2ef986cecc47f14a48afee2d437e733b",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -35,8 +35,8 @@
       "effects": "reset",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "69336d5f5e24d26d3ebd679655776cdf1a653a204470e5aa86fd197a37e15eae",
-      "reference_sha256": "68bcfe08cc07f6cba5c6d3005ab3e43098b3ce5cecb9b8a0acd392aad76f2bd3",
+      "local_sha256": "3418300435564ffe156bfd146dcef6744b329958c1a0b764754c911af95220b4",
+      "reference_sha256": "ade1deab430fa8d95903c1afa85b083694bfa3f29586133254b4249210be9076",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -48,8 +48,8 @@
       "effects": "read",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "b09de2799daed46503a372df182a33bd44485b1ed325e5d4ea794b37db0c59a5",
-      "reference_sha256": "c61a28227ab8b4c7492321ef90591cf63bb6b574a03bedd1b55351bc267f91df",
+      "local_sha256": "2d72e39f8385d3018b906ea39599d4f6f0c90f409c3a3e64fec180f0e44a9ed0",
+      "reference_sha256": "a013880c6d1b8162771bf47f55273ea988b687d4ac7e9d51927794b05982e0a7",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -61,8 +61,8 @@
       "effects": "config",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "0ce881b0826e5003221f4b24a547ab02a9c8bff71648d3102735e7c621a2f888",
-      "reference_sha256": "a1626f5f06d0e3e7edc6c6729c75f78830adc574adff146c7807a067cf1486ed",
+      "local_sha256": "ab222f798755221c5cb3b14e7390a2204336f62c4dc10f13051ab98189576548",
+      "reference_sha256": "83b3a0c065bb421e484a6c5be81c2273edb55c073628b759663912f554b36e7c",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -74,8 +74,8 @@
       "effects": "read",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "1214edd64517aeb88207603c7d83eb4a370d936b23c3185fe8c139971b3142e3",
-      "reference_sha256": "df779e4a7d38d5c3b9a78db530d3ae2d68cf301bbf5f25cafd0bf8d9780b3519",
+      "local_sha256": "f2867fdf9848dfcee9fd733d7426c2bbb10d3f55df06b31bde28cb11a616756d",
+      "reference_sha256": "654f0dd9631b2729814d4ac78db854087f05c6583e08097562073a7b6bfcc0dd",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -87,8 +87,8 @@
       "effects": "config",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "04f1301215ee0a06e3fe09f418153f265e4a64ece2f4a259f5f6f9183c641954",
-      "reference_sha256": "b30d70e91e7be83526c221c33650a1a98c781dec56e3d20b99e5ed6f05bf1cf3",
+      "local_sha256": "86ebc18043cec0564bca92635ee4686ff6dff134d9d1817a27d9fe724a837b4e",
+      "reference_sha256": "26623eda13a8dd5814695a68928e57ef90ef689104184a643e4ba64964548175",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -100,8 +100,8 @@
       "effects": "session",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "1df08cc03d1252e7550d228e61a9733899b9e1124a3106d3a02643298882783c",
-      "reference_sha256": "f63009b96a66c64586ab89f103589e01b899226acf17197b651c5f790576afa4",
+      "local_sha256": "1495f455a26001f2caaaa5356c04d19586547d8723dbe56193551e0f9e888773",
+      "reference_sha256": "a872017f8c7b450b31535596dff6324caffcc964292eff87318da01169427951",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -113,8 +113,8 @@
       "effects": "config",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "aab29ec07db01b2abf55a1dd5fc8eebd09c87c1c004512dcfbf9c31e46781dcd",
-      "reference_sha256": "3263cd81e47b5c52a4a222c3d110b2e850b6af0387331446003f04d4e47b1b7f",
+      "local_sha256": "f5f18c25f7bd307e710a90c719db6bbd4faf8fadad01a48c26f532f4c242a83b",
+      "reference_sha256": "8c3dd3f2381f7353434040036154ad36148500df40169e633b19a2cd9c96512d",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -126,8 +126,8 @@
       "effects": "network",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "462decec333e7b994cb472785e00240047e2237769f1a2e0660fe604fff7c729",
-      "reference_sha256": "e8a0838fe696fec2685dda7f6d83260fdcede2145b44fd04ec79b186a321d90b",
+      "local_sha256": "3130ede9a29658f4fc8e96be9d25b01956c6dca257a9dcd774c2723b27ea44f7",
+      "reference_sha256": "959ff1fc4c891fc0df5de242ba4b0405eeee0a37ec1160db663815e576f836cc",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -178,8 +178,8 @@
       "effects": "firmware",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "27bd4bd722e96783b2da158334fd7bb00991ccdba0f46b60f5266b6e1fe99813",
-      "reference_sha256": "a2387830457d0e3387d071acbdb2ea5c82b46f717b100db3ce8f91fac2987905",
+      "local_sha256": "78cb615cb8c552e4754b6b5a4b4dfb29fdcc2a15e6fa437423ede5d24c99384d",
+      "reference_sha256": "116277a2db865857991af705b1cd08193a36d94e500cf34d3e5edc1756521f3a",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -191,8 +191,8 @@
       "effects": "firmware",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "aa6e973424ea92d40fa3e8e021bd4ae55f65cc7d94d58aeb49910f003270c3f1",
-      "reference_sha256": "16db54034e6e6e14e9001beedfe46b49a820fde3ae0c99a8855b40498a0bdd1e",
+      "local_sha256": "067114a1232296c0df9b2757b247354b7fd1a0985f0d396eba782b6141994f2e",
+      "reference_sha256": "cf44191a2ec3e26a05f0ee14c2bb6b1b17468a02e61c36e18e4998c4c2bd9542",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -224,15 +224,15 @@
   ],
   "source_fingerprints": {
     "CGI/common.py": "f5755aa3b0be9d976da519f497f5db22be851a08798653f552d60716c7983cdd",
-    "ITEC/get_info.py": "eca2fdd4a85e6550fcfabe9c68822f33aca452c335b884847b470e7eff8c7930",
-    "ITEC/change_ip.py": "5f07e4a2a1a4cd648fdf3c4ef06c5b01c382bb1c3682d499b78fc459f2f9b6f9",
-    "ITEC/upload_config.py": "5a9320f8d47a48716fb670c749cdac326c4f2191416645747322ee53171f3d58",
-    "ITEC/upgrade_fw.py": "9507e27a5c72222037c639d078c62765540b3a7eb1ecc4fdf7283265fe05e833",
-    "ITC-C80/config_writer.py": "0b2b7fee550a0331d161e5911979c97deb316fba639b9986e7ea5b8628ea6e5f",
-    "ITEC.py": "f610025f9128037bffe5b6c8e6d157319a6aa4a43a8ac81334e181d5fac6fe24",
-    "251202_ITEC.py": "28c07c9915ef0b97524f3859df0201fea7e4bd4802d4ae2191f3cce7fa78433e",
-    "ITC-C80/ITC-C80修復/src/config_import.py": "f159a8a2cde595bceff44a624737902081bb5f9e3eeef90b0a6f3161eafda96f",
-    "ITC-C80/ITC-C80修復/src/inspection_engine.py": "bdbb227f3ec332b104b4705bce8a60fbe8e8433e88a7bd6477d59dadd62acdef"
+    "ITEC/legacy/itec/get_info.py": "eca2fdd4a85e6550fcfabe9c68822f33aca452c335b884847b470e7eff8c7930",
+    "ITEC/legacy/itec/change_ip.py": "5f07e4a2a1a4cd648fdf3c4ef06c5b01c382bb1c3682d499b78fc459f2f9b6f9",
+    "ITEC/legacy/itec/upload_config.py": "5a9320f8d47a48716fb670c749cdac326c4f2191416645747322ee53171f3d58",
+    "ITEC/legacy/itec/upgrade_fw.py": "9507e27a5c72222037c639d078c62765540b3a7eb1ecc4fdf7283265fe05e833",
+    "ITEC/legacy/itc-c80/config_writer.py": "0b2b7fee550a0331d161e5911979c97deb316fba639b9986e7ea5b8628ea6e5f",
+    "ITEC/legacy/root-scripts/ITEC.py": "f610025f9128037bffe5b6c8e6d157319a6aa4a43a8ac81334e181d5fac6fe24",
+    "ITEC/legacy/root-scripts/251202_ITEC.py": "28c07c9915ef0b97524f3859df0201fea7e4bd4802d4ae2191f3cce7fa78433e",
+    "ITEC/products/ITC-C80/src/config_import.py": "f159a8a2cde595bceff44a624737902081bb5f9e3eeef90b0a6f3161eafda96f",
+    "ITEC/products/ITC-C80/src/inspection_engine.py": "bdbb227f3ec332b104b4705bce8a60fbe8e8433e88a7bd6477d59dadd62acdef"
   },
   "scope": "All current ITC-C80 HTTP camera commands plus catalogued Milesight camera candidates; unrelated gateway/NVR products excluded.",
   "important_differences": [
@@ -240,7 +240,7 @@
     "The independent runner selects one authentication scheme, does not warm up the root page, and sends one CGI only.",
     "Current app performs a multi-step import-status/identity workflow. These probes deliberately do not orchestrate it.",
     "Legacy RSA/AES parameters match the current and legacy Python algorithms; marker acceptance is not verified application.",
-    "ITEC/change_ip.py treats some timeouts/JSON errors as success. Probes retain unknown outcome; L2 MAC SET is a different protocol.",
+    "ITEC/legacy/itec/change_ip.py treats some timeouts/JSON errors as success. Probes retain unknown outcome; L2 MAC SET is a different protocol.",
     "Reset option=2 behavior, post-config account changes and supported model-specific candidates require physical testing.",
     "Current IR-CUT testing analyzes RTSP frames; it does not send a dedicated IR-CUT CGI.",
     "Files referenced outside the Python workspace are provenance only, not read or validated by this comparison."

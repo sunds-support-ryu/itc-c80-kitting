@@ -1,17 +1,17 @@
 # 検査記録の保存規約
 
-`start.bat` から起動する。Step1外観確認 → Step2 RTSP映像確認の順に検査する。
+`start.pyw` から起動する。ITECルートの入口は `products/ITC-C80/start.pyw` に転送する。Step1外観確認 → Step2 RTSP映像確認の順に検査する。
 プログラム・記録・証拠はプロジェクトを基準とする相対パスを使用する。
 フォルダ全体を移動しても同じ構成で起動でき、CSVの証拠パスはCSV自身の場所を基準とする。
 外観確認と1台表示のRTSP検査は Enter = OK / Esc = NG。選択中の検査枠で使用できる。
 入力欄・証拠確認中では判定しない。4台表示のRTSP検査は画面のOK/NGボタンで判定する。
 
 ```text
-ITC-C80修復/
-├─ start.bat
-├─ bootstrap.py / appearance_inspection.py / inspection_engine.py / config_import.py
+ITEC/products/ITC-C80/
+├─ start.pyw / start.vbs
+├─ src/                       アプリケーションコードと必須の言語パック
 ├─ config file/                導入する設定ファイルを1個だけ置く
-├─ evidence_store.py            共通の分類・命名・保存処理
+├─ src/evidence_store.py         共通の分類・命名・保存処理
 ├─ records/
 │  ├─ camera_inspection.csv     検査結果・NG理由・証拠への相対パス
 │  └─ step1_evidence.csv        外観証拠・SN・MAC・問題箇所の枠数

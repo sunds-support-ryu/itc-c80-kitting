@@ -4,6 +4,12 @@ These rules apply to all work in this project. The user's requirement is an
 English-based architecture with mandatory language packs and support for
 multilingual operating systems.
 
+ITC-C80 is an ITEC OEM product. Its active workspace is
+`Python/ITEC/products/ITC-C80/`; original family/OEM scripts are preserved in
+`Python/ITEC/legacy/`. Keep product data and Git history with this project, use
+ancestor/catalog discovery rather than a fixed workspace depth, and do not
+execute archived scripts during folder organization.
+
 Read [docs/AGENT_LESSONS.md](docs/AGENT_LESSONS.md) before changes involving
 startup, updates, networking, persistence or inspection transitions. Apply the
 listed regression checks when touching the corresponding failure boundary.

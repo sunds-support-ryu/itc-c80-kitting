@@ -12,7 +12,7 @@ ENDPOINT = Endpoint(
     path='/cgi-bin/viewer/viewer.cgi',
     auth=('digest',),
     effects='firmware',
-    sources=('Python/ITEC/upgrade_fw.py:62', 'Python/CGI/products/Milesight_Camera/cgi/unlock_upgrade.py'),
+    sources=('Python/ITEC/legacy/itec/upgrade_fw.py:62', 'Python/CGI/products/Milesight_Camera/cgi/unlock_upgrade.py'),
     query=(('action', 'set.system.demotion.limit'), ('value', 0)),
     notes='GET changes upgrade restriction. Test actual effect on this model before any firmware update.',
 )

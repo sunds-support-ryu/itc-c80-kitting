@@ -1,5 +1,10 @@
 # ITC-C80 Camera Kitting Tool
 
+ITC-C80 is an ITEC OEM product. The workspace location is
+`Python/ITEC/products/ITC-C80/`; original scripts are preserved under
+`Python/ITEC/legacy/`. The existing OEM Git repository and release format remain
+independent, so downloaded portable packages still start from their own root.
+
 MAC-based discovery, USB appearance inspection, automatic IR-CUT checks, config import, final IP allocation and GAS reporting.
 
 ```text

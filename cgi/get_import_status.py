@@ -12,7 +12,7 @@ ENDPOINT = Endpoint(
     path='/vb.htm',
     auth=('digest', 'basic'),
     effects='read',
-    sources=('Python/ITC-C80/ITC-C80修復/src/config_import.py:257', 'Python/CGI/products/ITC_C80/cgi/get_import_status.py', 'Python/ITC-C80/ITC-C80修復/src/config_import.py'),
+    sources=('Python/ITEC/products/ITC-C80/src/config_import.py:257', 'Python/CGI/products/ITC_C80/cgi/get_import_status.py', 'Python/ITEC/products/ITC-C80/src/config_import.py'),
     query=(('', None), ('getimportstatus', None)),
     notes='Status 0=pending, 1=reported success, 2=password rejection, 3=file rejection. Capture actual firmware behavior.',
 )

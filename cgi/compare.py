@@ -32,9 +32,9 @@ def compare(workspace, folder=None):
                      'reference_sha256': hashlib.sha256(reference.read_bytes()).hexdigest(),
                      'hardware_validation': 'NOT_TESTED_IN_THIS_TASK'})
     fingerprints = {}
-    for relative in ('CGI/common.py', 'ITEC/get_info.py', 'ITEC/change_ip.py', 'ITEC/upload_config.py',
-                     'ITEC/upgrade_fw.py', 'ITC-C80/config_writer.py', 'ITEC.py', '251202_ITEC.py',
-                     'ITC-C80/ITC-C80修復/src/config_import.py', 'ITC-C80/ITC-C80修復/src/inspection_engine.py'):
+    for relative in ('CGI/common.py', 'ITEC/legacy/itec/get_info.py', 'ITEC/legacy/itec/change_ip.py', 'ITEC/legacy/itec/upload_config.py',
+                     'ITEC/legacy/itec/upgrade_fw.py', 'ITEC/legacy/itc-c80/config_writer.py', 'ITEC/legacy/root-scripts/ITEC.py', 'ITEC/legacy/root-scripts/251202_ITEC.py',
+                     'ITEC/products/ITC-C80/src/config_import.py', 'ITEC/products/ITC-C80/src/inspection_engine.py'):
         source = workspace / relative
         fingerprints[relative] = hashlib.sha256(source.read_bytes()).hexdigest() if source.is_file() else None
     return {'comparison': rows, 'source_fingerprints': fingerprints,
@@ -44,7 +44,7 @@ def compare(workspace, folder=None):
                 'The independent runner selects one authentication scheme, does not warm up the root page, and sends one CGI only.',
                 'Current app performs a multi-step import-status/identity workflow. These probes deliberately do not orchestrate it.',
                 'Legacy RSA/AES parameters match the current and legacy Python algorithms; marker acceptance is not verified application.',
-                'ITEC/change_ip.py treats some timeouts/JSON errors as success. Probes retain unknown outcome; L2 MAC SET is a different protocol.',
+                'ITEC/legacy/itec/change_ip.py treats some timeouts/JSON errors as success. Probes retain unknown outcome; L2 MAC SET is a different protocol.',
                 'Reset option=2 behavior, post-config account changes and supported model-specific candidates require physical testing.',
                 'Current IR-CUT testing analyzes RTSP frames; it does not send a dedicated IR-CUT CGI.',
                 'Files referenced outside the Python workspace are provenance only, not read or validated by this comparison.'
@@ -55,8 +55,11 @@ def main():
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--workspace', type=Path, default=Path(__file__).resolve().parents[3])
+    default_workspace = next((path for path in Path(__file__).resolve().parents if (path / 'CGI/products').is_dir()), None)
+    parser.add_argument('--workspace', type=Path, default=default_workspace)
     args = parser.parse_args()
+    if args.workspace is None:
+        parser.error('Workspace CGI catalog not found. Specify --workspace explicitly')
     folder = Path(__file__).resolve().parent
     report = compare(args.workspace)
     (folder / 'comparison_report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')

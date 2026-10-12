@@ -38,7 +38,7 @@ def build(version, launcher=None, script_only=False):
         build_script()
         print('GitHub Release assets:', folder)
         return
-    exe = Path(launcher).resolve() if launcher else BASE / 'release' / '1.0' / 'ITC-C80-Launcher-1.0.exe'
+    exe = Path(launcher).resolve() if launcher else BASE / 'release' / 'archive' / 'exe' / '1.0' / 'ITC-C80-Launcher-1.0.exe'
     if exe.exists():
         destination = folder / 'ITC-C80-Launcher-1.0.exe'
         if not destination.exists() or hashlib.sha256(destination.read_bytes()).digest() != hashlib.sha256(exe.read_bytes()).digest():

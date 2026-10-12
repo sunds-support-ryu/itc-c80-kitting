@@ -52,9 +52,10 @@ class CGIProbeTests(unittest.TestCase):
         self.assertTrue(load('get_snapshot').prepare('http://192.0.2.10').url.endswith('?mainstream'))
 
     def test_source_contract_comparison_has_no_technical_differences(self):
-        if not (ROOT.parents[1] / 'CGI/products').is_dir():
+        workspace = next((path for path in ROOT.parents if (path / 'CGI/products').is_dir()), None)
+        if workspace is None:
             self.skipTest('Workspace reference CGI library is not installed on this PC')
-        report = load('compare').compare(ROOT.parents[1], FOLDER)
+        report = load('compare').compare(workspace, FOLDER)
         self.assertTrue(all(row['technical_match'] for row in report['comparison']))
 
     def test_http_200_does_not_verify_writes_or_accept_false_status(self):
