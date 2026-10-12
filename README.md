@@ -43,3 +43,5 @@ Release assets are generated in `release/assets/1.1.1/`; initial distribution is
 - [Native desktop interface](docs/DESKTOP_UI.md)
 - [Evidence layout](docs/SAVE_LAYOUT.md)
 - [Launcher](docs/LAUNCHER.md)
+- [Independent CGI probes and next-day validation](cgi/README.md)
+- [CGI comparison against workspace sources](cgi/COMPARISON.md)

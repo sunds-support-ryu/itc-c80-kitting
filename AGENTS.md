@@ -8,6 +8,18 @@ Read [docs/AGENT_LESSONS.md](docs/AGENT_LESSONS.md) before changes involving
 startup, updates, networking, persistence or inspection transitions. Apply the
 listed regression checks when touching the corresponding failure boundary.
 
+## CGI validation before workflow redesign
+
+- Independent camera contracts and probes live in `cgi/`; read its README and
+  comparison report before rebuilding the logic tree. Keep them separate from
+  the production flow until physical effects and prerequisites are verified.
+- A catalog/source match is evidence of request compatibility, not model support
+  or device stability. Record physical results per MAC/SN/model/firmware and CGI.
+- Treat HTTP 200, config markers and readiness flags as distinct from completed
+  application/reset/IP changes. Do not promote an untested interface to verified.
+- The validation tools default to offline plans. Do not run writes simply to
+  summarize or compare contracts; use the user's explicit hardware-test scope.
+
 ## Architecture and localization (mandatory)
 
 - Build and validate the architecture in English first. Use English identifiers,

@@ -1,0 +1,138 @@
+[
+  {
+    "id": "get_info",
+    "scope": "current",
+    "reference": "CGI/products/ITC_C80/cgi/get_info.py",
+    "method": "GET",
+    "path": "/cgi-bin/admin/admin.cgi",
+    "effects": "read"
+  },
+  {
+    "id": "reset_keep_ip",
+    "scope": "current",
+    "reference": "CGI/products/ITC_C80/cgi/reset_keep_ip.py",
+    "method": "POST",
+    "path": "/cgi-bin/admin/admin.cgi",
+    "effects": "reset"
+  },
+  {
+    "id": "reset_ip",
+    "scope": "current",
+    "reference": "CGI/products/ITC_C80/cgi/reset_ip.py",
+    "method": "POST",
+    "path": "/cgi-bin/admin/admin.cgi",
+    "effects": "reset"
+  },
+  {
+    "id": "get_import_status",
+    "scope": "current",
+    "reference": "CGI/products/ITC_C80/cgi/get_import_status.py",
+    "method": "GET",
+    "path": "/vb.htm",
+    "effects": "read"
+  },
+  {
+    "id": "clear_import_status",
+    "scope": "current",
+    "reference": "CGI/products/ITC_C80/cgi/clear_import_status.py",
+    "method": "GET",
+    "path": "/vb.htm",
+    "effects": "config"
+  },
+  {
+    "id": "get_reload_flag",
+    "scope": "current",
+    "reference": "CGI/products/ITC_C80/cgi/get_reload_flag.py",
+    "method": "GET",
+    "path": "/vb.htm",
+    "effects": "read"
+  },
+  {
+    "id": "upload_config",
+    "scope": "current",
+    "reference": "CGI/products/ITC_C80/cgi/upload_config.py",
+    "method": "POST",
+    "path": "/dataloader.cgi",
+    "effects": "config"
+  },
+  {
+    "id": "get_challenge",
+    "scope": "current",
+    "reference": "CGI/products/Milesight_Camera/cgi/get_challenge.py",
+    "method": "GET",
+    "path": "/challenge",
+    "effects": "session"
+  },
+  {
+    "id": "upload_config_legacy",
+    "scope": "current",
+    "reference": "CGI/products/Milesight_Camera/cgi/upload_config_legacy.py",
+    "method": "POST",
+    "path": "/dataloader.cgi",
+    "effects": "config"
+  },
+  {
+    "id": "set_tcp",
+    "scope": "candidate",
+    "reference": "CGI/products/Milesight_Camera/cgi/set_tcp.py",
+    "method": "POST",
+    "path": "/cgi-bin/admin/admin.cgi",
+    "effects": "network"
+  },
+  {
+    "id": "get_snapshot",
+    "scope": "candidate",
+    "reference": "CGI/products/Milesight_Camera/cgi/get_snapshot.py",
+    "method": "GET",
+    "path": "/snapshot.cgi",
+    "effects": "read"
+  },
+  {
+    "id": "get_log",
+    "scope": "candidate",
+    "reference": "CGI/products/Milesight_Camera/cgi/get_log.py",
+    "method": "GET",
+    "path": "/vb.htm",
+    "effects": "read"
+  },
+  {
+    "id": "goto_preset",
+    "scope": "candidate",
+    "reference": "CGI/products/Milesight_Camera/cgi/goto_preset.py",
+    "method": "GET",
+    "path": "/vb.htm",
+    "effects": "control"
+  },
+  {
+    "id": "unlock_upgrade",
+    "scope": "candidate",
+    "reference": "CGI/products/Milesight_Camera/cgi/unlock_upgrade.py",
+    "method": "GET",
+    "path": "/cgi-bin/viewer/viewer.cgi",
+    "effects": "firmware"
+  },
+  {
+    "id": "upload_firmware",
+    "scope": "candidate",
+    "reference": "CGI/products/Milesight_Camera/cgi/upload_firmware.py",
+    "method": "POST",
+    "path": "/update.cgi",
+    "effects": "firmware"
+  },
+  {
+    "id": "get_lpr_upload_policy",
+    "scope": "candidate",
+    "reference": "CGI/products/Milesight_Camera/cgi/get_lpr_upload_policy.py",
+    "method": "GET",
+    "path": "/cgi-bin/operator/operator.cgi",
+    "effects": "read"
+  },
+  {
+    "id": "get_parking_detection",
+    "scope": "candidate",
+    "reference": "CGI/products/Milesight_Camera/cgi/get_parking_detection.py",
+    "method": "GET",
+    "path": "/cgi-bin/operator/operator.cgi",
+    "effects": "read"
+  }
+]
