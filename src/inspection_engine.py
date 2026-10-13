@@ -1,5 +1,6 @@
 'Camera inspection engine: HTTP identity, reset, USB/RTSP streaming and evidence. Native UI calls the shared engine through the owner-loop adapter.'
 
+from camera_cgi.reset import reset as send_reset, RESET_PATH
 import asyncio
 import csv
 import importlib.util
@@ -59,10 +60,6 @@ INFO_PATH = (
     "?action=get.system.information&format=json"
 )
 
-RESET_PATH = (
-    "/cgi-bin/admin/admin.cgi"
-    "?action=set.system.reset&format=json"
-)
 
 
 # =============================================================================
@@ -607,23 +604,11 @@ async def reset_device(
     camera,
     option
 ):
-    'Option 3 resets while retaining IP; option 2 is managed by config import after authentication changes.'
+    'Workflow adapter for shared reset(): option 3 retains IP and users; only this option is allowed here. Option 2 is dispatched by config import with verified credentials.'
 
     if option != 3:
         send_log(f'[Reset rejected] Step2 only allows option=3 / SN={camera.sn}')
         return False
-
-    url = (
-        f"http://"
-        f"{camera.ip}"
-        f"{RESET_PATH}"
-    )
-
-
-    body = {
-        "options": option
-    }
-
 
     if option == 3:
 
@@ -645,8 +630,10 @@ async def reset_device(
 
         async with reset_semaphore:
 
+            def reset_transport(target, method, payload, headers, credentials):
+                return camera_http_request(target, method, json.loads(payload))
             status, text = await asyncio.to_thread(
-                camera_http_request, url, "POST", body
+                send_reset, f"http://{camera.ip}", option, (USERNAME, PASSWORD), transport=reset_transport
             )
             if 200 <= status < 300:
                 send_log(f"[{name} OK] SN={camera.sn}")

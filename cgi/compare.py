@@ -14,6 +14,20 @@ def contract(path):
     tree = ast.parse(path.read_text(encoding='utf-8'))
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == 'ENDPOINT' for target in node.targets):
+            if isinstance(node.value.func, ast.Name) and node.value.func.id == 'reset_endpoint':
+                option=ast.literal_eval(node.value.args[0])
+                helper=ast.parse(path.with_name('reset.py').read_text(encoding='utf-8'))
+                function=next(item for item in helper.body if isinstance(item,ast.FunctionDef) and item.name=='reset_endpoint')
+                call=next(item.value for item in function.body if isinstance(item,ast.Return))
+                class Substitute(ast.NodeTransformer):
+                    def visit_Name(self,item):
+                        return ast.Constant(option) if item.id=='option' else item
+                result={}
+                for keyword in call.keywords:
+                    try:result[keyword.arg]=ast.literal_eval(Substitute().visit(keyword.value))
+                    except (ValueError,TypeError):pass
+                result.update({keyword.arg:ast.literal_eval(keyword.value) for keyword in node.value.keywords})
+                return result
             return {keyword.arg: ast.literal_eval(keyword.value) for keyword in node.value.keywords}
     raise ValueError('Endpoint contract not found: ' + str(path))
 

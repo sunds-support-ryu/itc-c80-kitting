@@ -32,6 +32,28 @@ is also not CGI. Keep these separate when rebuilding the logic tree.
 
 ## Running individual probes
 
+Reset uses one shared function, `reset(base_url, option, credentials,
+transport=...)`, implemented in `src/camera_cgi/reset.py` and exposed by
+`cgi/reset.py`. Options are retention bits, not sequential modes:
+
+| Option | Retain | Evidence |
+| --- | --- | --- |
+| 1 | IP/network flag | Device Web definition; physical test pending |
+| 2 | Users/accounts flag; network may reset | Tested device returned to 192.168.5.190 |
+| 3 | IP + users/accounts (1 OR 2) | Tested device retained work IP |
+| 4 | OSD flag; no IP/user retention requested | Device Web definition; physical test pending |
+
+```powershell
+python cgi/reset.py --option 3 --base-url http://192.168.5.190
+```
+
+This is a plan. Add `--execute` only for an authorized reset. Option 0 and values
+outside 1/2/3/4 are rejected. A lost response is not retried. The existing
+`reset_ip.py` and `reset_keep_ip.py` are compatibility selectors for options 2
+and 3, not separate implementations. The production pre-inspection stage still
+restricts itself to option 3; adding API support for 1/4 does not authorize that
+workflow to perform them.
+
 Show the contract, without a target or connection:
 
 ```powershell

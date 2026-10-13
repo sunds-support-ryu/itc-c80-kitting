@@ -22,8 +22,8 @@
       "effects": "reset",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "4692d72d487663f55276b92b16b42caffb4669abe3f36d08622028bf9a39262e",
-      "reference_sha256": "3ba0d77ef888d396df05acb287f7750a2ef986cecc47f14a48afee2d437e733b",
+      "local_sha256": "c2e06306ee1fb8a486a186967d11da3945eb32b3eccbf4b7cb56cfc4aa67f179",
+      "reference_sha256": "34a1842cb4ad1ac8cedcb5f201915645a4969c06e7cc44f8b2396bed6b25a3fc",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -35,7 +35,7 @@
       "effects": "reset",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "dc89a45577b158b7aac738635fe4ba41ce6d20c71866459d7d2542502b576983",
+      "local_sha256": "69feeb951bb6e9f4937ecf65a42e26e18a962783ceaa18a2249deb3139835214",
       "reference_sha256": "c9c47db53c7949d7e76d44b7165365c6dcaf7f3f8b2b0aa979b16d871a3b4d9d",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
@@ -231,8 +231,8 @@
     "ITEC/legacy/itc-c80/config_writer.py": "0b2b7fee550a0331d161e5911979c97deb316fba639b9986e7ea5b8628ea6e5f",
     "ITEC/legacy/root-scripts/ITEC.py": "f610025f9128037bffe5b6c8e6d157319a6aa4a43a8ac81334e181d5fac6fe24",
     "ITEC/legacy/root-scripts/251202_ITEC.py": "28c07c9915ef0b97524f3859df0201fea7e4bd4802d4ae2191f3cce7fa78433e",
-    "ITEC/products/ITC-C80/src/config_import.py": "c400960da0c2617be7165f18854dc459452ba4089af63e0144e7583976818920",
-    "ITEC/products/ITC-C80/src/inspection_engine.py": "3ebb1079a3af28adb86fd29f87c6240623c13f717879900a1a715891f2c2933e"
+    "ITEC/products/ITC-C80/src/config_import.py": "997ecd055199b7f6c00a48f30d1e21891a5fa4a08f3a7c18322dbc860cff0783",
+    "ITEC/products/ITC-C80/src/inspection_engine.py": "bab7933c9251106c87aa49ff71f44d2beb9ae779eaa81ecce00fd8738660228e"
   },
   "scope": "All current ITC-C80 HTTP camera commands plus catalogued Milesight camera candidates; unrelated gateway/NVR products excluded.",
   "important_differences": [

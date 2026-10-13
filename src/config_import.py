@@ -1,5 +1,6 @@
 'Import config after inspection using Web status or legacy RSA/AES.'
 from camera_cgi.transport import request, create_transport
+from camera_cgi.reset import reset as send_reset, RESET_PATH
 import base64
 import http.cookiejar
 import json
@@ -17,7 +18,6 @@ FINAL_IP = "192.168.5.190"
 # Post-config verification account from the existing config writer.
 VERIFY_CREDENTIALS = (os.environ.get("ITC_AFTER_CAMERA_USER", "admin"), os.environ.get("ITC_AFTER_CAMERA_PASSWORD", ""))
 INFO_PATH = "/cgi-bin/admin/admin.cgi?action=get.system.information&format=json"
-RESET_PATH = "/cgi-bin/admin/admin.cgi?action=set.system.reset&format=json"
 
 
 class Step3Error(Exception):
@@ -313,8 +313,7 @@ def run(camera, base_dir, credentials, log=lambda text: None, transport=None,
             return True, 'Config and SN verified. Waiting for label confirmation.'
         stage = "IP Reset option=2"
         log(stage)
-        status, body = transport(base + RESET_PATH, "POST", json.dumps({"options": 2}).encode(),
-                                 {"Content-Type": "application/json"}, verified_credentials)
+        status, body = send_reset(base, 2, verified_credentials, transport=transport)
         if not 200 <= status < 300:
             raise Step3Error(f"IP Reset HTTP={status}")
         stage = f'Waiting for reboot - MAC verification -> {FINAL_IP}'

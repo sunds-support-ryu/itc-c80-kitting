@@ -140,7 +140,7 @@ def inspect_reply(command, status, content, content_type=''):
     elif command == 'get_challenge':
         if re.search(r'<key>.+?</key>', text, re.S) and re.search(r'<keyID>.+?</keyID>', text, re.S):
             result['interpretation'] = 'handshake_fields_present'
-    elif command in ('upload_config', 'upload_firmware', 'reset_ip', 'reset_keep_ip', 'set_tcp', 'goto_preset', 'unlock_upgrade'):
+    elif command in ('upload_config', 'upload_firmware', 'reset', 'reset_ip', 'reset_keep_ip', 'set_tcp', 'goto_preset', 'unlock_upgrade'):
         result['interpretation'] = 'http_accepted_effect_unverified'
         if command == 'upload_config':
             # Current device Web UI ignores this HTML body and polls import status.
