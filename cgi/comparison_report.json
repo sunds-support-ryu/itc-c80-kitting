@@ -9,8 +9,8 @@
       "effects": "read",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "0c1a7bb95131fa96287ddf4cc546a439c418bbd44b3db1039fdafb84cc556386",
-      "reference_sha256": "28d77a6aa31bb8cfe86f9cc26d9438888600f0841480abd7727b8255063ce5b6",
+      "local_sha256": "ccb3c459e871ff43b9a4727a56a2da69db4f190840f56321634bb0c23085b386",
+      "reference_sha256": "21df8c44f4806262d38bdbac8f9c7fec616a72a3d157827f6bf50af98e20e290",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -35,8 +35,8 @@
       "effects": "reset",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "3418300435564ffe156bfd146dcef6744b329958c1a0b764754c911af95220b4",
-      "reference_sha256": "ade1deab430fa8d95903c1afa85b083694bfa3f29586133254b4249210be9076",
+      "local_sha256": "dc89a45577b158b7aac738635fe4ba41ce6d20c71866459d7d2542502b576983",
+      "reference_sha256": "c9c47db53c7949d7e76d44b7165365c6dcaf7f3f8b2b0aa979b16d871a3b4d9d",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -48,8 +48,8 @@
       "effects": "read",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "2d72e39f8385d3018b906ea39599d4f6f0c90f409c3a3e64fec180f0e44a9ed0",
-      "reference_sha256": "a013880c6d1b8162771bf47f55273ea988b687d4ac7e9d51927794b05982e0a7",
+      "local_sha256": "2ca6e46be7fed2a63229f9e937c53cc935617f06b611c19e2cd10b3ed92c77f6",
+      "reference_sha256": "478181874d0c01015afccdd27646cfbd17c6ff4949246b15b1175416f5252d60",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -61,8 +61,8 @@
       "effects": "config",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "ab222f798755221c5cb3b14e7390a2204336f62c4dc10f13051ab98189576548",
-      "reference_sha256": "83b3a0c065bb421e484a6c5be81c2273edb55c073628b759663912f554b36e7c",
+      "local_sha256": "2ac2067b7341b9397562ae67a5e97dd5ba6d7a34ad77261090e0e9bbddb5b1ec",
+      "reference_sha256": "4da43df68d3e3d39e665c66a0731503d6153866fb2359c45aa11dc5c0a0a7326",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -74,8 +74,8 @@
       "effects": "read",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "f2867fdf9848dfcee9fd733d7426c2bbb10d3f55df06b31bde28cb11a616756d",
-      "reference_sha256": "654f0dd9631b2729814d4ac78db854087f05c6583e08097562073a7b6bfcc0dd",
+      "local_sha256": "112fb32a5f57a9e5d899592f7d31224fd81edf506562cc46352487b59161d6fc",
+      "reference_sha256": "5e0d0d4047404f08480159052930532a615ac4c6a43251579ef1df372cb0642e",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -87,8 +87,8 @@
       "effects": "config",
       "technical_match": true,
       "differences": {},
-      "local_sha256": "86ebc18043cec0564bca92635ee4686ff6dff134d9d1817a27d9fe724a837b4e",
-      "reference_sha256": "26623eda13a8dd5814695a68928e57ef90ef689104184a643e4ba64964548175",
+      "local_sha256": "5d3bc4121e1f11dfbffbebdc82e37900ec6fa3c9617ea19b5a5af2086b0e9ffb",
+      "reference_sha256": "6859a755d37725f4c75a1cda40ecbc56d9b2e69d2c48ad70d8a5a83bf7308324",
       "hardware_validation": "NOT_TESTED_IN_THIS_TASK"
     },
     {
@@ -231,8 +231,8 @@
     "ITEC/legacy/itc-c80/config_writer.py": "0b2b7fee550a0331d161e5911979c97deb316fba639b9986e7ea5b8628ea6e5f",
     "ITEC/legacy/root-scripts/ITEC.py": "f610025f9128037bffe5b6c8e6d157319a6aa4a43a8ac81334e181d5fac6fe24",
     "ITEC/legacy/root-scripts/251202_ITEC.py": "28c07c9915ef0b97524f3859df0201fea7e4bd4802d4ae2191f3cce7fa78433e",
-    "ITEC/products/ITC-C80/src/config_import.py": "f159a8a2cde595bceff44a624737902081bb5f9e3eeef90b0a6f3161eafda96f",
-    "ITEC/products/ITC-C80/src/inspection_engine.py": "bdbb227f3ec332b104b4705bce8a60fbe8e8433e88a7bd6477d59dadd62acdef"
+    "ITEC/products/ITC-C80/src/config_import.py": "c400960da0c2617be7165f18854dc459452ba4089af63e0144e7583976818920",
+    "ITEC/products/ITC-C80/src/inspection_engine.py": "3ebb1079a3af28adb86fd29f87c6240623c13f717879900a1a715891f2c2933e"
   },
   "scope": "All current ITC-C80 HTTP camera commands plus catalogued Milesight camera candidates; unrelated gateway/NVR products excluded.",
   "important_differences": [

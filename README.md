@@ -10,7 +10,12 @@ MAC-based discovery, USB appearance inspection, automatic IR-CUT checks, config 
 ```text
 src/          Application and launcher source
 tests/       Offline automated tests
-samples/      Hardware test/demo scripts
+cgi/          HTTP camera interfaces and config probes
+rtsp/         RTSP diagnostic probes
+network/      L2/MAC/IP diagnostic utilities
+inspection/   Appearance/IR inspection experiments
+validation/   Cross-module verification and shared timing records
+samples/      Archived UI/launch examples
 examples/     GAS receiver and configuration examples
 tools/        Build and release scripts
 docs/         Operating instructions
@@ -31,7 +36,7 @@ Copy `examples/launcher_settings.yaml` to `launcher_settings.yaml` if needed.
 
 ```powershell
 python -m unittest discover -s tests -p 'test_*.py'
-python samples/ir_cut_sample.py --ip 192.168.0.150
+python inspection/ir_cut_sample.py --ip 192.168.0.150
 ```
 
 Automated tests use simulated devices. The device flow and final IP samples write to real cameras and require explicit hardware-test authorization.

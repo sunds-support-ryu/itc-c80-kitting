@@ -12,7 +12,7 @@ ENDPOINT = Endpoint(
     path='/vb.htm',
     auth=('digest', 'basic'),
     effects='config',
-    sources=('Python/ITEC/products/ITC-C80/src/config_import.py:261', 'Python/CGI/products/ITC_C80/cgi/clear_import_status.py', 'Python/ITEC/products/ITC-C80/src/config_import.py'),
+    sources=('Python/ITEC/products/ITC-C80/src/config_import.py:204', 'Python/CGI/products/ITC_C80/cgi/clear_import_status.py', 'Python/ITEC/products/ITC-C80/src/config_import.py'),
     query=(('setimportstatus', 0),),
     notes='GET changes state. Used before upload and as acknowledgement after success; test those contexts separately.',
 )

@@ -126,7 +126,7 @@ CGI stability or redesign the current workflow.
 
 ## Timestamped module runs
 
-`module_validation.py` runs explicitly selected phases against a MAC-bound
+`../validation/module_validation.py` runs explicitly selected phases against a MAC-bound
 NC8164. It defaults to a plan; every hardware phase requires `--execute`.
 The phased validator needs the full application's `src/` plus Scapy/Npcap;
 place this CGI folder inside the application root. Individual HTTP probes do not
@@ -136,7 +136,7 @@ It selects one config explicitly instead of changing the production config
 folder or saved production credentials.
 
 ```powershell
-python cgi/module_validation.py --run data/module_validation/<run> --phase baseline --execute
+python validation/module_validation.py --run data/module_validation/<run> --phase baseline --execute
 ```
 
 Requests are recorded as `.py` literal data with UTC/JST/unix timestamps,

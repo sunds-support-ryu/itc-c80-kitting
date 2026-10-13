@@ -16,6 +16,13 @@ listed regression checks when touching the corresponding failure boundary.
 
 ## CGI validation before workflow redesign
 
+- Keep HTTP contracts/probes in `cgi/`, RTSP probes in `rtsp/`, L2/IP utilities
+  in `network/`, image/IR experiments in `inspection/`, and cross-module runners
+  plus shared timing recorders in `validation/`. Do not mix protocols merely
+  because a validation phase uses more than one transport.
+- Production capture lives in `src/rtsp/`; CGI HTTP transport lives in
+  `src/camera_cgi/`. Existing workflow adapters retain their public interfaces.
+
 - Independent camera contracts and probes live in `cgi/`; read its README and
   comparison report before rebuilding the logic tree. Keep them separate from
   the production flow until physical effects and prerequisites are verified.

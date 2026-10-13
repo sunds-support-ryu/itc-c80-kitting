@@ -14,6 +14,8 @@ MANAGED = {'src/' + name for name in ('bootstrap.py', 'appearance_inspection.py'
     'config_import.py', 'inspection_runtime.py', 'native_window.py', 'evidence_store.py', 'network_workflow.py', 'job_store.py',
     'gas_post.py', 'l2_device_info.py', 'instance_lock.py', 'ir_cut_check.py', 'app_paths.py')}
 MANAGED.update({'src/launcher.py', 'src/launcher_core.py', 'src/script_launcher.py',
+                'src/rtsp/__init__.py', 'src/rtsp/reader.py',
+                'src/camera_cgi/__init__.py', 'src/camera_cgi/transport.py',
                 'src/i18n.py', 'src/locales/__init__.py', 'src/locales/en.py', 'src/locales/ja.py',
                 'examples/gas_receiver.gs', 'docs/LAUNCHER.md', 'docs/JOB_WORKFLOW.md', 'docs/DESKTOP_UI.md', 'docs/SAVE_LAYOUT.md', 'docs/LOCALIZATION.md'})
 

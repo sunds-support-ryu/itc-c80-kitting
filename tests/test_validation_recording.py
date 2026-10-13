@@ -10,8 +10,8 @@ from unittest.mock import patch
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'cgi'))
-from validation_recording import Recorder, read_literal
+sys.path.insert(0, str(ROOT / 'validation'))
+from recording import Recorder, read_literal
 
 
 class ValidationRecordingTests(unittest.TestCase):

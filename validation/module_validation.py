@@ -1,6 +1,6 @@
 """Authorized phased camera validation. Secrets and measured records stay in data/.
 
-Default phase is read-only baseline. Modifying phases require --execute and
+All phases require --execute; otherwise only a plan is printed. Modifying phases are
 are latched before dispatch. Target identity is bound by L2 MAC and HTTP SN.
 """
 import argparse
@@ -17,9 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 import config_import as cfg
 import network_workflow as network
-from validation_recording import Recorder, read_literal
+from recording import Recorder, read_literal
 
-spec = importlib.util.spec_from_file_location('hardware_validation_cgi', Path(__file__).with_name('__init__.py'), submodule_search_locations=[str(Path(__file__).parent)])
+spec = importlib.util.spec_from_file_location('hardware_validation_cgi', ROOT / 'cgi' / '__init__.py', submodule_search_locations=[str(ROOT / 'cgi')])
 package = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = package
 spec.loader.exec_module(package)
@@ -228,7 +228,7 @@ class Validator:
             raise ValueError('Import status not zero; upload not sent')
         params={'pwd':self.private['config_import_password']}
         if legacy:
-            from legacy_crypto import create_challenge,encrypt_import_password
+            from hardware_validation_cgi.legacy_crypto import create_challenge,encrypt_import_password
             private,challenge=create_challenge()
             response=self.request('get_challenge','legacy_handshake',params=challenge)
             params=encrypt_import_password(private,response['_raw'].decode('utf-8-sig'),self.private['config_import_password'])

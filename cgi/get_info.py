@@ -12,7 +12,7 @@ ENDPOINT = Endpoint(
     path='/cgi-bin/admin/admin.cgi',
     auth=('digest', 'basic'),
     effects='read',
-    sources=('Python/ITEC/products/ITC-C80/src/config_import.py:75', 'Python/CGI/products/ITC_C80/cgi/get_info.py', 'Python/ITEC/products/ITC-C80/src/config_import.py'),
+    sources=('Python/ITEC/products/ITC-C80/src/config_import.py:57', 'Python/CGI/products/ITC_C80/cgi/get_info.py', 'Python/ITEC/products/ITC-C80/src/config_import.py'),
     query=(('action', 'get.system.information'), ('format', 'json')),
     notes='Read system information as JSON; compare SN with the physical camera label.',
 )
