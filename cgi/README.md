@@ -38,20 +38,19 @@ transport=...)`, implemented in `src/camera_cgi/reset.py` and exposed by
 
 | Option | Retain | Evidence |
 | --- | --- | --- |
+| 0 | No requested retention (full defaults) | Device Web definition; physical test pending |
 | 1 | IP/network flag | Device Web definition; physical test pending |
 | 2 | Users/accounts flag; network may reset | Tested device returned to 192.168.5.190 |
 | 3 | IP + users/accounts (1 OR 2) | Tested device retained work IP |
-| 4 | OSD flag; no IP/user retention requested | Device Web definition; physical test pending |
 
 ```powershell
 python cgi/reset.py --option 3 --base-url http://192.168.5.190
 ```
 
-This is a plan. Add `--execute` only for an authorized reset. Option 0 and values
-outside 1/2/3/4 are rejected. A lost response is not retried. The existing
+This is a plan. Add `--execute` only for an authorized reset. Options outside 0/1/2/3 are rejected. Option 0 can reset IP and accounts. A lost response is not retried. The existing
 `reset_ip.py` and `reset_keep_ip.py` are compatibility selectors for options 2
 and 3, not separate implementations. The production pre-inspection stage still
-restricts itself to option 3; adding API support for 1/4 does not authorize that
+restricts itself to option 3; adding API support for 0/1 does not authorize that
 workflow to perform them.
 
 Show the contract, without a target or connection:

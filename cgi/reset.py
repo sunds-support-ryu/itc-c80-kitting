@@ -1,4 +1,4 @@
-"""Unified reset API and offline/explicit-execute CLI for retention options 1-4."""
+"""Unified reset API and offline/explicit-execute CLI for retention options 0-3."""
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
@@ -27,7 +27,7 @@ def prepare(base_url, option, **kwargs):
 if __name__ == '__main__':
     import argparse
     parser=argparse.ArgumentParser(add_help=False)
-    parser.add_argument('--option', type=int, choices=(1,2,3,4), required=True)
+    parser.add_argument('--option', type=int, choices=(0,1,2,3), required=True)
     args, remaining=parser.parse_known_args()
     sys.argv=[sys.argv[0],*remaining]
     show_command(reset_endpoint(args.option), 'reset')

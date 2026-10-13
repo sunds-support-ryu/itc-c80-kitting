@@ -9,7 +9,7 @@ from camera_cgi.reset import reset, validate_option
 
 class ResetTests(unittest.TestCase):
     def test_all_four_options_use_one_post_and_preserve_option_value(self):
-        for option in (1,2,3,4):
+        for option in (0,1,2,3):
             calls=[]
             def transport(*args):calls.append(args);return 200,'accepted'
             reply=reset('http://192.0.2.10',option,('fixture-user','fixture-password'),transport=transport)
@@ -20,7 +20,7 @@ class ResetTests(unittest.TestCase):
             self.assertTrue(calls[0][0].endswith('?action=set.system.reset&format=json'))
 
     def test_invalid_options_rejected_before_transport(self):
-        for option in (0,5,8,-1,True,False,'2',2.0,None):
+        for option in (4,5,8,-1,True,False,'2',2.0,None):
             with self.assertRaises(ValueError):validate_option(option)
 
     def test_lost_response_is_not_retried(self):
