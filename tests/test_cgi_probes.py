@@ -68,6 +68,9 @@ class CGIProbeTests(unittest.TestCase):
         for status in range(4):
             reply = common.inspect_reply('get_import_status', 200, ('UW OK getimportstatus=' + str(status)).encode())
             self.assertEqual(reply['import_status'], status)
+        reply=common.inspect_reply('upload_config',200,b'<script>alert(upload_failed_tips);</script>')
+        self.assertEqual(reply['interpretation'],'http_accepted_effect_unverified')
+        self.assertTrue(reply['html_warning_present'])
 
     def test_preview_is_offline_and_masks_import_password(self):
         import requests

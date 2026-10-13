@@ -20,6 +20,11 @@ failure has the same cause.
 | A working camera was discovered again | Discovery continues while work runs | Hold per-MAC work slots, prevent duplicate SET/import dispatch and release only on confirmed removal or explicit rekit |
 | Atomic JSON replacement raised WinError 5 | Replacement failed on Windows; fixed temp names and external file occupation require distinct investigation | Unique temp files, serialized mutations, bounded retries, visible save failure; never silently discard job state |
 | Tests passed without proving physical inspection | Offline tests simulate frames and human actions | State exactly what was simulated; actual purple inspection and label confirmation require human evidence |
+| ARP appeared before HTTP recovered | Actual MAC/IP movement was confirmed while identity requests still failed; later identity requests recovered | Measure L2/IP application and HTTP readiness separately; never resend SET because HTTP is not yet ready |
+| Upload HTML suggested failure despite import status 1 | This device maintenance code ignores upload HTML, polls status, clears status 1 and delays 15 seconds before readiness | Preserve raw warning plus authoritative status/identity evidence; do not use substring matching on HTML as modern import verdict |
+| A Viewer account could change the network via CGI | The account readback showed userLevel=2; set.network.tcp returned succeed and MAC-bound IP actually changed | Never assume a role label prevents writes; verify selected API permissions on the exact model/firmware before relying on them |
+| Initial RTSP delivery appeared above nominal FPS | Decoder startup buffers delivered frames in a burst; steady frames were approximately the nominal 25 FPS | Report nominal FPS, buffered delivery FPS and steady delivery FPS separately |
+| Large downloaded Web scripts slowed evidence persistence | Full source was copied into every aggregate rewrite | Preserve raw source in separate private .py asset evidence; retain references and hashes in timed request records |
 
 ## Language migration lessons
 

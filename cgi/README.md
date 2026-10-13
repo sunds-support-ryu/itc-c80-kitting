@@ -124,6 +124,46 @@ Once interfaces are verified, use the measured prerequisites, effects and
 completion conditions to build the new logic tree. This task does not declare
 CGI stability or redesign the current workflow.
 
+## Timestamped module runs
+
+`module_validation.py` runs explicitly selected phases against a MAC-bound
+NC8164. It defaults to a plan; every hardware phase requires `--execute`.
+The phased validator needs the full application's `src/` plus Scapy/Npcap;
+place this CGI folder inside the application root. Individual HTTP probes do not
+require Npcap. The separate CGI ZIP is not a replacement for the full app.
+Use a private Python literal `SETTINGS` file under `data/module_validation/`.
+It selects one config explicitly instead of changing the production config
+folder or saved production credentials.
+
+```powershell
+python cgi/module_validation.py --run data/module_validation/<run> --phase baseline --execute
+```
+
+Requests are recorded as `.py` literal data with UTC/JST/unix timestamps,
+monotonic total duration, HTTP-header/body timings, status, profile, auth scheme,
+reply interpretation and separate measured effect/recovery events. Every module
+has its own `<module>.py` evidence file plus `validation_record.py` and a private
+`validation_summary.py`. Private keys/passwords are not included in public code;
+all data/ evidence stays excluded from Git and release packages.
+
+Vendor L2 requests are unicast to the chosen MAC. A write phase is persisted
+before dispatch and cannot be blindly repeated. Firmware is a separate pending
+test requiring a model-compatible image. RTSP probes receive credentials through
+stdin; distinguish initial buffered delivery FPS from steady delivery and nominal
+stream FPS.
+
+`get_users.py` is an additional read-only interface discovered in the device's
+user-management Web code (`get.system.user`). It is not part of the original
+17-command workspace snapshot. Role mapping in that UI is Admin=0,
+Operator=1, Viewer=2; inspect actual permissions and write effects rather than
+assuming that a Viewer label blocks every CGI write.
+
+Current device maintenance UI polls `getimportstatus`, clears status 1 and waits
+15 seconds before readiness polling. Its upload callback ignores the HTML body.
+`upload_failed_tips` in an HTML reply is retained as a warning rather than alone
+classifying a modern import as failed. Historical replies and their original
+interpretations are retained in private evidence alongside this correction.
+
 ## Source comparison
 
 `COMPARISON.md` summarizes matches and operational differences.

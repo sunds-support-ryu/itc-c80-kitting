@@ -142,7 +142,11 @@ def inspect_reply(command, status, content, content_type=''):
             result['interpretation'] = 'handshake_fields_present'
     elif command in ('upload_config', 'upload_firmware', 'reset_ip', 'reset_keep_ip', 'set_tcp', 'goto_preset', 'unlock_upgrade'):
         result['interpretation'] = 'http_accepted_effect_unverified'
-        if 'upload_failed' in text:
+        if command == 'upload_config':
+            # Current device Web UI ignores this HTML body and polls import status.
+            # Some replies contain upload_failed_tips even when status becomes 1.
+            result['html_warning_present'] = 'upload_failed' in text
+        elif 'upload_failed' in text:
             result['interpretation'] = 'upload_rejected'
     elif command == 'upload_config_legacy':
         result['interpretation'] = ('upload_rejected' if 'upload_failed' in text else
